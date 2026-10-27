@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arcade 101 · ESFF Promotion 2027</title>
+<meta name="description" content="La borne d'arcade de la 101e promotion de l'ESFF : combat, avions, course, plateau, quiz. Gagne des tickets à gratter et décroche -10 % sur ton sweat de promo.">
+<meta name="theme-color" content="#08090b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Archivo:wght@400;600;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>
+  // le générique couvre la page dès le premier affichage (une fois par session, pas pour un lien d'invitation)
+  try { if (sessionStorage.getItem('esff-intro-seen') !== '1' && !/[?&]salon=/.test(location.search)) document.documentElement.classList.add('intro-on'); } catch (e) {}
+</script>
+</head>
+<body>
+<div class="intro" id="intro" hidden>
+  <canvas id="introCanvas" aria-label="Générique d'Arcade 101"></canvas>
+  <button class="intro-btn intro-skip" id="introSkip">PASSER ▶▶</button>
+  <button class="intro-btn intro-sound" id="introSound">🔇 Activer le son</button>
+</div>
+<canvas id="embers" aria-hidden="true"></canvas>
+
+<main class="cabinet" id="cabinet">
+  <!-- Fronton lumineux -->
+  <header class="cab-marquee">
+    <img src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=200,fit=crop/sfgsxbx6Dl11FkMl/designer-1-UZ1AcVWRrdt1Rehi.png" alt="Logo ESFF 101e promotion" width="84" height="84">
+    <div class="marquee-text">
+      <h1>ARCADE <b>101</b></h1>
+      <p>Fonderie · Forge · Châlons-en-Champagne</p>
+    </div>
+    <div class="marquee-bulbs" aria-hidden="true"></div>
+  </header>
+
+  <!-- Écran -->
+  <div class="cab-bezel">
+    <div class="crt" id="crt">
+      <div class="crt-content">
+
+        <section class="menu" id="menu" aria-label="Sélection du jeu">
+          <div class="menu-head">
+            <span class="pixel blink">INSERT COIN</span>
+            <h2 class="pixel">SELECT GAME</h2>
+            <button class="pixel p1" id="p1Btn" title="Changer de pseudo">P1 : <span id="p1Name">???</span></button>
+          </div>
+          <div class="menu-body">
+            <ul class="game-list" id="gameList" role="listbox" aria-label="Jeux"></ul>
+            <div class="preview" id="preview" aria-live="polite"></div>
+          </div>
+          <div class="menu-foot pixel">↑↓ CHOISIR · ENTRÉE JOUER · <span class="hl">🎟️ = -10 %</span></div>
+        </section>
+
+        <section class="panel" id="ticketsPanel" hidden>
+  <div class="panel-inner tickets-panel">
+    <div class="panel-head"><button class="icon-btn" data-back aria-label="Retour au menu">◀</button><h3 class="pixel">MES TICKETS</h3></div>
+    <div class="tickets-wrap">
+      <div class="tickets-info">
+        <p class="muted">Gagne des tickets en jouant. Gratte le sable du moule : <b>1 ticket sur 5</b> cache un code <b>-10 %</b> pour esff2027.shop.</p>
+        <div class="tickets-count"><b id="ticketBig">0</b><span>ticket(s) à gratter</span></div>
+        <button class="btn btn-hot" id="scratchBtn">Gratter un ticket</button>
+        <div class="codes" id="codes"></div>
+        <p class="server-warn" id="serverWarn" hidden>Serveur injoignable : lance <code>python server.py</code>.</p>
+      </div>
+      <div class="scratch-zone">
+        <div class="scratch-card idle" id="scratchCard">
+          <div class="scratch-result" id="scratchResult"><span class="scratch-tag">Ticket ESFF 101</span><strong>Gagne un ticket en jouant</strong></div>
+          <canvas id="scratchCanvas" aria-label="Zone à gratter"></canvas>
+        </div>
+        <p class="scratch-hint" id="scratchHint">Ton prochain ticket apparaîtra ici.</p>
+      </div>
+    </div>
+  </div>
+        </section>
+
+        <section class="panel" id="panel" hidden></section>
+
+        <div class="modal" id="modal" hidden>
+          <div class="modal-box" role="dialog" aria-labelledby="modalTitle">
+            <div class="modal-top">
+              <button class="icon-btn" id="closeBtn" aria-label="Retour au menu">◀</button>
+              <div>
+                <span class="modal-teinte" id="modalTeinte"></span>
+                <h3 id="modalTitle"></h3>
+              </div>
+              <div class="hud"><span id="hudInfo"></span><span class="hud-score" id="hudScoreWrap">Score <b id="hudScore">0</b></span></div>
+            </div>
+            <div class="stage" id="stage"></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="crt-scan" aria-hidden="true"></div>
+      <div class="crt-vignette" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Pupitre de commande -->
+  <div class="cab-deck" aria-hidden="true">
+    <div class="joystick" id="joystick">
+      <button data-key="ArrowUp" class="j-up"></button>
+      <button data-key="ArrowLeft" class="j-left"></button>
+      <button data-key="ArrowRight" class="j-right"></button>
+      <button data-key="ArrowDown" class="j-down"></button>
+      <span class="j-base"></span><span class="j-stick" id="stick"></span>
+    </div>
+    <div class="deck-center">
+      <button class="start-btn pixel" data-key="Enter">START</button>
+      <span class="pixel deck-help">ESPACE/J = A · K = B · L = C</span>
+    </div>
+    <div class="deck-btns">
+      <button class="arc-btn a" data-key="Space"><span>A</span></button>
+      <button class="arc-btn b" data-key="KeyK"><span>B</span></button>
+      <button class="arc-btn c" data-key="KeyL"><span>C</span></button>
+    </div>
+  </div>
+
+  <!-- Façade : monnayeur et distributeur de tickets -->
+  <div class="cab-front">
+    <div class="coin-door" aria-hidden="true"><span class="coin-slot"></span><span class="pixel">25¢</span></div>
+    <button class="dispenser" id="dispenser" title="Mes tickets à gratter">
+      <span class="ticket-strip"><i class="ticket-ico"></i><b id="ticketCount">0</b></span>
+      <span class="pixel">TICKETS</span>
+    </button>
+    <div class="front-actions">
+      <button class="icon-btn" id="muteBtn" aria-label="Couper le son">🔊</button>
+      <a class="shop-link" href="https://www.esff2027.shop/shop" target="_blank" rel="noopener">Boutique&nbsp;→</a>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p><strong>ESFF Promotion 2027</strong> · Chaque sweat finance la coulée de notre cloche de promotion · <a href="mailto:commande@esff2027.shop">commande@esff2027.shop</a></p>
+  <p class="fine">Un code par commande, dans la limite de la coulée. Frappé dans la masse. · <a href="#" id="introReplay">Revoir le générique</a></p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+
+<script src="app.js"></script>
+<script src="online.js"></script>
+<script src="forgeo.js"></script>
+<script src="fighter.js"></script>
+<script src="planes.js"></script>
+<script src="tekken3d.js"></script>
+<script src="usine-data.js"></script>
+<script src="usine.js"></script>
+<script src="galaxie.js"></script>
+<script src="cabinet.js"></script>
+<script src="intro.js"></script>
+</body>
+</html>

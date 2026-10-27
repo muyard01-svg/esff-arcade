@@ -1,0 +1,5 @@
+arcade.db
+__pycache__/
+*.pyc
+deploy/esff-arcade.zip
+promo_code.txt

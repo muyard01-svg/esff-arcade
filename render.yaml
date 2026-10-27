@@ -1,0 +1,13 @@
+# Configuration Render (Blueprint) : Render lit ce fichier pour créer le service tout seul.
+services:
+  - type: web
+    name: esff-arcade
+    runtime: docker
+    plan: free            # passer en "starter" + ajouter un disque monté sur /data pour garder les tickets
+    region: frankfurt     # au plus près de Châlons pour des combats réactifs
+    healthCheckPath: /health
+    envVars:
+      - key: ESFF_PROMO_CODE
+        sync: false       # Render demandera la valeur à la création (ne pas la mettre dans le code)
+      - key: ESFF_WIN_RATE
+        value: "0.20"
