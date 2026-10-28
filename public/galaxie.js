@@ -43,7 +43,10 @@ function galaxie3d(stage, api) {
   let viewIdx = save.gxView || 0;
   const keys = { L: false, R: false, F: false };
   const KM = { ArrowLeft: 'L', KeyA: 'L', KeyQ: 'L', ArrowRight: 'R', KeyD: 'R', Space: 'F', KeyJ: 'F', KeyX: 'F', KeyV: 'V', KeyC: 'V' };
-  const switchView = () => { viewIdx = (viewIdx + 1) % GX_VIEWS.length; save.gxView = viewIdx; persist(); viewFlash = 1.2; sfx(700, 0.08, 'triangle', 0.04); };
+  const switchView = () => {
+    viewIdx = (viewIdx + 1) % GX_VIEWS.length; save.gxView = viewIdx; persist(); viewFlash = 1.2;
+    if (typeof fxWarp === 'function') fxWarp(screen, 'switch');   // ondulation au changement de vue
+  };
   const kd = e => { const k = KM[e.code]; if (!k) return; e.preventDefault(); if (k === 'V') { if (!e.repeat) switchView(); return; } keys[k] = true; };
   const ku = e => { const k = KM[e.code]; if (k && k !== 'V') keys[k] = false; };
   window.addEventListener('keydown', kd);

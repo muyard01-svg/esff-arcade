@@ -750,8 +750,10 @@ function openShell(title, label, showScore = true) {
   $('#hudScoreWrap').hidden = !showScore;
   $('#hudScore').textContent = '0';
   $('#hudInfo').textContent = '';
+  const entering = modal.hidden;
   modal.hidden = false;
   document.body.classList.add('playing');
+  if (entering && typeof fxWarp === 'function') fxWarp($('.crt-content'), 'enter');   // on « rentre » dans le jeu
 }
 
 function ticketRule(gm) {
@@ -871,6 +873,7 @@ function finish(score) {
 }
 
 function closeGame() {
+  if (!modal.hidden && typeof fxWarp === 'function') fxWarp($('.crt-content'), 'exit');
   clearStage();
   modal.hidden = true;
   document.body.classList.remove('playing');

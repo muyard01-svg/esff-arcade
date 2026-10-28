@@ -628,3 +628,19 @@ html.intro-on, html.intro-on body { overflow: hidden; }
   .fgo-name { font-size: 5.5px; }
   .fgo-trade-cols { grid-template-columns: 1fr; }
 }
+
+/* ================= Passage dans le jeu (ondulations) et grand écran ================= */
+.fx-rings { position: absolute; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
+.fx-rings i { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%;
+  border: 3px solid rgba(255,190,110,.85); box-shadow: 0 0 30px rgba(236,100,30,.8), inset 0 0 20px rgba(255,220,160,.6);
+  animation: fxRing .9s ease-out forwards; }
+.fx-rings i:nth-child(2) { animation-delay: .12s; } .fx-rings i:nth-child(3) { animation-delay: .24s; }
+.fx-rings.fx-exit i { border-color: rgba(127,212,255,.8); box-shadow: 0 0 30px rgba(90,168,255,.7); }
+.fx-rings.fx-switch i { animation-duration: .65s; }
+@keyframes fxRing { from { transform: scale(.2); opacity: 1; } to { transform: scale(40); opacity: 0; } }
+.crt-content { will-change: transform; }
+.crt:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; }
+.crt:fullscreen .crt-scan, .crt:fullscreen .crt-vignette { opacity: .6; }
+body.pseudo-fs { overflow: hidden; }
+body.pseudo-fs .cabinet { z-index: 500; }
+body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min-height: 0; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
