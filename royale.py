@@ -1,8 +1,9 @@
 """Coulée Royale : FPS / TPS battle royale des métiers de la métallurgie (serveur, 30 images/s).
 
-Carte : une grande halle de fonderie en 3D (fours, piles de moules, conteneurs sur lesquels on peut grimper,
-poches de coulée, piliers). Chacun arrive à mains nues avec 100 PV : il n'y a au sol que des armes à
-looter, de rareté variable. La fonte en fusion envahit la halle par l'extérieur ; le dernier debout gagne.
+Quatre cartes : la halle de coulée, la forge, le laminoir et le parc à ferraille. Tout le monde part accroché
+au pont roulant et saute quand il veut, puis plane jusqu'au sol. Chacun arrive à mains nues avec 100 PV :
+les armes de la métallurgie (rareté variable) sont rangées dans des coffres qu'on ouvre avec E ; on ramasse
+une arme avec E et on lâche celle qu'on tient avec G. La fonte en fusion envahit la carte ; le dernier debout gagne.
 
 Déplacements : vraie physique (accélération, inertie, sprint, saut et gravité, marches et toits d'obstacles).
 Chaque navigateur prédit son propre personnage et envoie sa position ; le serveur vérifie qu'elle est
@@ -15,7 +16,6 @@ import random
 import time
 
 FPS = 30
-W, H = 4400, 3000
 PR = 18                      # rayon d'un joueur
 BODY = 104                   # taille d'un joueur
 EYE = 92                     # hauteur des yeux
@@ -31,9 +31,8 @@ ACC_AIR = 2.0
 JUMP_V = 430
 GRAVITY = 1350
 STEP = 30                    # hauteur franchie sans sauter
-CEIL = 700
 
-L, R, U, D, FIRE, PICK, SWAP, JUMP, RUN = 1, 2, 4, 8, 16, 32, 64, 128, 256
+L, R, U, D, FIRE, PICK, SWAP, JUMP, RUN, DROP = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512
 
 RARITY = [  # nom, multiplicateur de dégâts, couleur, poids d'apparition
     ('commun', 1.0, '#b8bcc2', 55),
@@ -64,84 +63,76 @@ METIERS = {
     'lamineur':      {'name': 'Lamineur', 'color': '#5AA8FF', 'perk': 'commence avec 35 d\'armure', 'armor': 35},
     'chaudronnier':  {'name': 'Chaudronnier', 'color': '#7FD48A', 'perk': '-12 % de dégâts reçus', 'tough': 0.88},
     'soudeur':       {'name': 'Soudeur', 'color': '#F5B700', 'perk': '+20 % au chalumeau et à la louche', 'fire': 1.2},
-    'metallurgiste': {'name': 'Métallurgiste', 'color': '#C77DFF', 'perk': 'voit les armes rares sur la mini-carte', 'sight': True},
+    'metallurgiste': {'name': 'Métallurgiste', 'color': '#C77DFF', 'perk': 'voit les coffres et les armes rares sur la mini-carte', 'sight': True},
 }
-KILL_HEAL = 25               # PV rendus par élimination (il n'y a plus de soins au sol)
+KILL_HEAL = 25               # PV rendus par élimination (il n'y a pas de soins)
+CHEST_ITEMS = 2              # armes éjectées par un coffre
+REACH_ITEM = 55              # portée pour ramasser une arme
+REACH_CHEST = 80             # portée pour ouvrir un coffre
 
-# phases de la fonte : (attente s, durée du resserrement s, rayon final, dégâts/s hors zone)
-PHASES = [(45, 25, 1850, 1), (25, 22, 1120, 3), (20, 20, 600, 6), (15, 18, 240, 10), (10, 15, 0, 16)]
-# constructions (à la manière des battle royale de construction) : grille de tuiles, 3 matériaux
-TILE = 150                   # côté d'une tuile de construction
-LEVEL = 150                  # hauteur d'un étage
-BUILD_HP = {'bois': 90, 'brique': 140, 'acier': 200}
-BUILD_COST = 10
-MATS = ('bois', 'brique', 'acier')
-MAT_CAP = 500
-HARVEST = {'palette': 'bois', 'bureau': 'bois', 'moules': 'brique', 'four': 'brique', 'mur': 'brique', 'silo': 'acier',
-           'conteneur': 'acier', 'poche': 'acier', 'pilier': 'acier', 'convoyeur': 'acier'}
-HARVEST_N = 8
-MAX_BUILDS = 450
-# largage : tout le monde part du pont roulant qui traverse la halle, puis plane jusqu'au sol
-BUS_Z = 560
+# largage : tout le monde part du pont roulant qui traverse la carte, puis plane jusqu'au sol
 BUS_TIME = 16.0
 GLIDE_SPEED = 430
 GLIDE_FALL = 200
 
-HEIGHTS = {'mur': CEIL, 'four': 220, 'convoyeur': 40, 'bureau': 190, 'silo': 320, 'pilier': CEIL,
-           'moules': 90, 'conteneur': 150, 'poche': 120, 'palette': 28}
 
+# ======================= cartes =======================
+class Arena:
+    """Une carte : obstacles (boîtes posées au sol, hauteur z), grille de recherche et géométrie partagée."""
+    def __init__(self, key, title, w, h, ceil, obs, sky=False):
+        self.key, self.title, self.w, self.h, self.ceil, self.obs, self.sky = key, title, w, h, ceil, obs, sky
+        self.grid = {}
+        for o in obs:
+            for gx in range(int(o['x'] // CELL), int((o['x'] + o['w']) // CELL) + 1):
+                for gy in range(int(o['y'] // CELL), int((o['y'] + o['h']) // CELL) + 1):
+                    self.grid.setdefault((gx, gy), []).append(o)
+        self.bus_z = ceil - 140
 
-def build_map(seed=1012):
-    """Halle de fonderie : murs, rangée de fours, piles de moules, conteneurs, poches, piliers, bureaux."""
-    rnd = random.Random(seed)
-    obs = []
-    add = lambda x, y, w, h, k: obs.append({'x': x, 'y': y, 'w': w, 'h': h, 'k': k, 'z': HEIGHTS[k]})
-    t = 40
-    add(0, 0, W, t, 'mur'); add(0, H - t, W, t, 'mur'); add(0, 0, t, H, 'mur'); add(W - t, 0, t, H, 'mur')
-    for i in range(5):
-        add(1060 + i * 500, 480, 170, 170, 'four')
-    add(960, 1440, 1000, 60, 'convoyeur'); add(2440, 1440, 1000, 60, 'convoyeur')
-    add(160, 2560, 420, 300, 'bureau'); add(160, 2100, 160, 220, 'silo')
-    for i in range(3):
-        add(3800 + i * 150, 140, 110, 110, 'silo')
-    for gx in range(400, W - 200, 600):
-        for gy in range(700, H - 200, 600):
-            if not any(abs(gx - (o['x'] + o['w'] / 2)) < o['w'] / 2 + 60 and abs(gy - (o['y'] + o['h'] / 2)) < o['h'] / 2 + 60 for o in obs):
-                add(gx - 22, gy - 22, 44, 44, 'pilier')
-    kinds = [('moules', 110, 110), ('moules', 90, 160), ('conteneur', 240, 100), ('conteneur', 100, 240), ('poche', 90, 90), ('palette', 120, 70)]
-    tries = 0
-    while len(obs) < 170 and tries < 5000:
-        tries += 1
-        k, w, h = rnd.choice(kinds)
-        x, y = rnd.uniform(80, W - 80 - w), rnd.uniform(80, H - 80 - h)
-        if any(x < o['x'] + o['w'] + 70 and x + w + 70 > o['x'] and y < o['y'] + o['h'] + 70 and y + h + 70 > o['y'] for o in obs):
-            continue
-        add(round(x), round(y), w, h, k)
-    # marches pour grimper sur les conteneurs : une pile de moules ou une palette collée à certains
-    for o in [o for o in obs if o['k'] == 'conteneur'][::2]:
-        x, y = (o['x'] - 96, o['y'] + 4) if o['w'] < o['h'] else (o['x'] + 4, o['y'] - 96)
-        if 60 < x and 60 < y and not any(x < q['x'] + q['w'] and x + 92 > q['x'] and y < q['y'] + q['h'] and y + 92 > q['y'] for q in obs):
-            add(x, y, 92, 92, 'moules')
-    return obs
+    def around(self, x, y):
+        cx, cy = int(x // CELL), int(y // CELL)
+        seen = []
+        for gx in (cx - 1, cx, cx + 1):
+            for gy in (cy - 1, cy, cy + 1):
+                for o in self.grid.get((gx, gy), ()):
+                    if o not in seen:
+                        seen.append(o)
+        return seen
 
+    def ground_at(self, x, y, z):
+        """Sol sous les pieds : le plus haut dessus d'obstacle atteignable (pas plus haut que z + STEP)."""
+        g = 0
+        for o in self.around(x, y):
+            if g < o['z'] <= z + STEP and touches(o, x, y, PR * 0.7):
+                g = o['z']
+        return g
 
-OBSTACLES = build_map()
-GRID: dict[tuple, list] = {}
-for _o in OBSTACLES:
-    for gx in range(int(_o['x'] // CELL), int((_o['x'] + _o['w']) // CELL) + 1):
-        for gy in range(int(_o['y'] // CELL), int((_o['y'] + _o['h']) // CELL) + 1):
-            GRID.setdefault((gx, gy), []).append(_o)
+    def body_blocked(self, x, y, z):
+        if x < PR or y < PR or x > self.w - PR or y > self.h - PR:
+            return True
+        return any(o['z'] > z + STEP and touches(o, x, y, PR - 1) for o in self.around(x, y))
 
+    def map_at(self, x, y, z):
+        for o in self.grid.get((int(x // CELL), int(y // CELL)), ()):
+            if o['x'] <= x <= o['x'] + o['w'] and o['y'] <= y <= o['y'] + o['h'] and z <= o['z']:
+                return o
+        return None
 
-def around(x, y):
-    cx, cy = int(x // CELL), int(y // CELL)
-    seen = []
-    for gx in (cx - 1, cx, cx + 1):
-        for gy in (cy - 1, cy, cy + 1):
-            for o in GRID.get((gx, gy), ()):
-                if o not in seen:
-                    seen.append(o)
-    return seen
+    def point_blocked(self, x, y, z):
+        if x < 0 or y < 0 or x > self.w or y > self.h or z < 0 or z > self.ceil:
+            return True
+        return self.map_at(x, y, z) is not None
+
+    def seg_clear(self, x1, y1, z1, x2, y2, z2):
+        n = int(math.hypot(x2 - x1, y2 - y1) // 25) + 1
+        return not any(self.point_blocked(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n, z1 + (z2 - z1) * k / n) for k in range(1, n))
+
+    def free_spot(self, rnd, margin=40):
+        for _ in range(500):
+            x, y = rnd.uniform(90, self.w - 90), rnd.uniform(90, self.h - 90)
+            if not any(abs(x - (o['x'] + o['w'] / 2)) < o['w'] / 2 + margin and abs(y - (o['y'] + o['h'] / 2)) < o['h'] / 2 + margin
+                       for o in self.around(x, y)):
+                return x, y
+        return self.w / 2, self.h / 2
 
 
 def touches(o, x, y, r):
@@ -150,132 +141,120 @@ def touches(o, x, y, r):
     return (x - nx) ** 2 + (y - ny) ** 2 < r * r
 
 
-def piece_box(b):
-    """Boîte (x0, y0, z0, x1, y1, z1) d'un mur ou d'un plancher ; pour une rampe : sa tuile sur un étage."""
-    x0, y0, base = b['gx'] * TILE, b['gy'] * TILE, b['lv'] * LEVEL
-    if b['t'] == 'mur':
-        if b['d'] == 0:
-            return (x0 + TILE - 5, y0, base, x0 + TILE + 5, y0 + TILE, base + LEVEL)
-        return (x0, y0 + TILE - 5, base, x0 + TILE, y0 + TILE + 5, base + LEVEL)
-    if b['t'] == 'sol':
-        return (x0, y0, base - 8, x0 + TILE, y0 + TILE, base)
-    return (x0, y0, base, x0 + TILE, y0 + TILE, base + LEVEL)
+def scatter(rnd, obs, add, w, h, kinds, total, gap=70, tries=6000):
+    """Disperse des obstacles sans qu'ils se touchent (couloirs d'au moins `gap`)."""
+    n = 0
+    while len(obs) < total and n < tries:
+        n += 1
+        k, ow, oh = rnd.choice(kinds)
+        x, y = rnd.uniform(80, w - 80 - ow), rnd.uniform(80, h - 80 - oh)
+        if any(x < o['x'] + o['w'] + gap and x + ow + gap > o['x'] and y < o['y'] + o['h'] + gap and y + oh + gap > o['y'] for o in obs):
+            continue
+        add(round(x), round(y), ow, oh, k)
 
 
-def ramp_h(b, x, y):
-    fx = min(1.0, max(0.0, (x - b['gx'] * TILE) / TILE))
-    fy = min(1.0, max(0.0, (y - b['gy'] * TILE) / TILE))
-    return b['lv'] * LEVEL + LEVEL * (fx, fy, 1 - fx, 1 - fy)[b['d']]
+def walls(add, w, h, kind='mur'):
+    t = 40
+    add(0, 0, w, t, kind); add(0, h - t, w, t, kind); add(0, 0, t, h, kind); add(w - t, 0, t, h, kind)
 
 
-class Builds:
-    """Constructions posées, indexées par tuile (un mur sur une arête appartient aux deux tuiles voisines)."""
-    def __init__(self):
-        self.items, self.tiles, self.keys = {}, {}, set()
-
-    @staticmethod
-    def tiles_of(b):
-        t = [(b['gx'], b['gy'])]
-        if b['t'] == 'mur':
-            t.append((b['gx'] + 1, b['gy']) if b['d'] == 0 else (b['gx'], b['gy'] + 1))
-        return t
-
-    def add(self, b):
-        self.items[b['id']] = b
-        self.keys.add(b['key'])
-        for t in self.tiles_of(b):
-            self.tiles.setdefault(t, []).append(b)
-
-    def remove(self, b):
-        self.items.pop(b['id'], None)
-        self.keys.discard(b['key'])
-        for t in self.tiles_of(b):
-            lst = self.tiles.get(t)
-            if lst and b in lst:
-                lst.remove(b)
-
-    def near(self, x, y, r=0.0):
-        out = {}
-        for gx in range(int((x - r) // TILE), int((x + r) // TILE) + 1):
-            for gy in range(int((y - r) // TILE), int((y + r) // TILE) + 1):
-                for b in self.tiles.get((gx, gy), ()):
-                    out[b['id']] = b
-        return out.values()
+def pillars(obs, add, w, h, step=600, y0=700):
+    for gx in range(400, w - 200, step):
+        for gy in range(y0, h - 200, step):
+            if not any(abs(gx - (o['x'] + o['w'] / 2)) < o['w'] / 2 + 60 and abs(gy - (o['y'] + o['h'] / 2)) < o['h'] / 2 + 60 for o in obs):
+                add(gx - 22, gy - 22, 44, 44, 'pilier')
 
 
-def box_touch(bx, x, y, r):
-    nx = min(max(x, bx[0]), bx[3])
-    ny = min(max(y, bx[1]), bx[4])
-    return (x - nx) ** 2 + (y - ny) ** 2 < r * r
+def steps_to(obs, add, kind_from, step_kind='moules', every=2):
+    """Marches pour grimper sur certains gros obstacles : une pile collée contre eux."""
+    for o in [o for o in obs if o['k'] == kind_from][::every]:
+        x, y = (o['x'] - 96, o['y'] + 4) if o['w'] < o['h'] else (o['x'] + 4, o['y'] - 96)
+        if 60 < x and 60 < y and not any(x < q['x'] + q['w'] and x + 92 > q['x'] and y < q['y'] + q['h'] and y + 92 > q['y'] for q in obs):
+            add(x, y, 92, 92, step_kind)
 
 
-def ground_at(x, y, z, bi=None):
-    """Sol sous les pieds : le plus haut dessus d'obstacle, de plancher ou de rampe atteignable (pas plus haut que z + STEP)."""
-    g = 0
-    for o in around(x, y):
-        if o['z'] <= z + STEP and o['z'] > g and touches(o, x, y, PR * 0.7):
-            g = o['z']
-    if bi:
-        for b in bi.near(x, y, PR):
-            if b['t'] == 'sol':
-                top = b['lv'] * LEVEL
-                if g < top <= z + STEP and box_touch(piece_box(b), x, y, PR * 0.7):
-                    g = top
-            elif b['t'] == 'rampe' and b['gx'] * TILE <= x <= (b['gx'] + 1) * TILE and b['gy'] * TILE <= y <= (b['gy'] + 1) * TILE:
-                h = ramp_h(b, x, y)
-                if g < h <= z + STEP:
-                    g = h
-    return g
+def map_halle():
+    W, H, C = 4400, 3000, 700
+    hz = {'mur': C, 'four': 220, 'convoyeur': 40, 'bureau': 190, 'silo': 320, 'pilier': C, 'moules': 90, 'conteneur': 150, 'poche': 120, 'palette': 28}
+    rnd, obs = random.Random(1012), []
+    add = lambda x, y, w, h, k: obs.append({'x': x, 'y': y, 'w': w, 'h': h, 'k': k, 'z': hz[k]})
+    walls(add, W, H)
+    for i in range(5):
+        add(1060 + i * 500, 480, 170, 170, 'four')
+    add(960, 1440, 1000, 60, 'convoyeur'); add(2440, 1440, 1000, 60, 'convoyeur')
+    add(160, 2560, 420, 300, 'bureau'); add(160, 2100, 160, 220, 'silo')
+    for i in range(3):
+        add(3800 + i * 150, 140, 110, 110, 'silo')
+    pillars(obs, add, W, H)
+    scatter(rnd, obs, add, W, H, [('moules', 110, 110), ('moules', 90, 160), ('conteneur', 240, 100), ('conteneur', 100, 240), ('poche', 90, 90), ('palette', 120, 70)], 170)
+    steps_to(obs, add, 'conteneur')
+    return Arena('halle', 'Halle de coulée', W, H, C, obs)
 
 
-def body_blocked(x, y, z, bi=None):
-    if x < PR or y < PR or x > W - PR or y > H - PR:
-        return True
-    if any(o['z'] > z + STEP and touches(o, x, y, PR - 1) for o in around(x, y)):
-        return True
-    if bi:
-        for b in bi.near(x, y, PR):
-            if b['t'] != 'rampe':
-                bx = piece_box(b)
-                if bx[2] < z + BODY and bx[5] > z + STEP and box_touch(bx, x, y, PR - 1):
-                    return True
-    return False
+def map_forge():
+    W, H, C = 3600, 3600, 620
+    hz = {'mur': C, 'pilon': 380, 'foyer': 110, 'enclume': 45, 'barres': 120, 'cuve': 60, 'etabli': 80, 'pilier': C, 'palette': 28, 'moules': 90}
+    rnd, obs = random.Random(2077), []
+    add = lambda x, y, w, h, k: obs.append({'x': x, 'y': y, 'w': w, 'h': h, 'k': k, 'z': hz[k]})
+    walls(add, W, H)
+    # îlots de forge : un marteau-pilon, son foyer, une enclume et une cuve de trempe
+    for cx in (700, 1800, 2900):
+        for cy in (700, 1800, 2900):
+            if (cx, cy) == (1800, 1800):
+                continue
+            add(cx - 80, cy - 60, 160, 120, 'pilon')
+            add(cx - 230, cy - 70, 120, 140, 'foyer')
+            add(cx + 130, cy - 20, 70, 40, 'enclume')
+            add(cx - 60, cy + 150, 160, 90, 'cuve')
+    add(1640, 1640, 320, 320, 'pilon')        # le gros pilon au centre
+    pillars(obs, add, W, H, 700, 400)
+    scatter(rnd, obs, add, W, H, [('barres', 220, 60), ('barres', 60, 220), ('etabli', 160, 70), ('enclume', 70, 40), ('palette', 120, 70), ('moules', 92, 92)], 150)
+    steps_to(obs, add, 'barres', 'palette', 3)
+    return Arena('forge', 'La Forge', W, H, C, obs)
 
 
-def build_at(x, y, z, bi):
-    """Construction qui occupe ce point, sinon None."""
-    if not bi:
-        return None
-    for b in bi.near(x, y):
-        if b['t'] == 'rampe':
-            if b['gx'] * TILE <= x <= (b['gx'] + 1) * TILE and b['gy'] * TILE <= y <= (b['gy'] + 1) * TILE and abs(z - ramp_h(b, x, y)) < 9:
-                return b
-        else:
-            bx = piece_box(b)
-            if bx[0] <= x <= bx[3] and bx[1] <= y <= bx[4] and bx[2] <= z <= bx[5]:
-                return b
-    return None
+def map_laminoir():
+    W, H, C = 5600, 2400, 800
+    hz = {'mur': C, 'cage': 260, 'rouleaux': 30, 'bobine': 120, 'brames': 70, 'cabine': 220, 'pilier': C, 'conteneur': 150, 'palette': 28}
+    rnd, obs = random.Random(3141), []
+    add = lambda x, y, w, h, k: obs.append({'x': x, 'y': y, 'w': w, 'h': h, 'k': k, 'z': hz[k]})
+    walls(add, W, H)
+    # le train de laminage : cages espacées et tables à rouleaux entre elles
+    y = H / 2 - 130
+    for i in range(10):
+        x = 500 + i * 470
+        add(x, y, 140, 260, 'cage')
+        if i < 9:
+            add(x + 140, y + 95, 330, 70, 'rouleaux')
+    add(260, 260, 260, 200, 'cabine'); add(W - 520, H - 460, 260, 200, 'cabine')
+    pillars(obs, add, W, H, 700, 400)
+    scatter(rnd, obs, add, W, H, [('bobine', 120, 120), ('bobine', 120, 120), ('brames', 260, 120), ('brames', 120, 260), ('conteneur', 240, 100), ('palette', 120, 70)], 160)
+    steps_to(obs, add, 'conteneur', 'brames', 2)
+    return Arena('laminoir', 'Le Laminoir', W, H, C, obs)
 
 
-def map_at(x, y, z):
-    for o in GRID.get((int(x // CELL), int(y // CELL)), ()):
-        if o['x'] <= x <= o['x'] + o['w'] and o['y'] <= y <= o['y'] + o['h'] and z <= o['z']:
-            return o
-    return None
+def map_ferraille():
+    W, H, C = 4200, 4200, 1300
+    hz = {'cloture': 300, 'tas': 160, 'cube': 100, 'conteneur': 150, 'grue': 900, 'benne': 110, 'presse': 220, 'palette': 28, 'pilier': 900}
+    rnd, obs = random.Random(4242), []
+    add = lambda x, y, w, h, k: obs.append({'x': x, 'y': y, 'w': w, 'h': h, 'k': k, 'z': hz[k]})
+    walls(add, W, H, 'cloture')
+    for x, y in ((1000, 1000), (3100, 1100), (2100, 3100)):
+        add(x, y, 90, 90, 'grue')
+    add(1900, 1900, 320, 200, 'presse')
+    # allées de cubes compactés empilés
+    for row in range(3):
+        for k in range(6):
+            add(600 + k * 130, 2900 + row * 130, 100, 100, 'cube')
+    scatter(rnd, obs, add, W, H, [('tas', 260, 260), ('tas', 200, 200), ('cube', 100, 100), ('conteneur', 240, 100), ('conteneur', 100, 240), ('benne', 240, 120), ('palette', 120, 70)], 150, gap=80)
+    steps_to(obs, add, 'conteneur', 'cube', 2)
+    return Arena('ferraille', 'Parc à ferraille', W, H, C, obs, sky=True)
 
 
-def point_blocked(x, y, z, bi=None):
-    if x < 0 or y < 0 or x > W or y > H or z < 0 or z > CEIL:
-        return True
-    return map_at(x, y, z) is not None or build_at(x, y, z, bi) is not None
+MAPS = {m.key: m for m in (map_halle(), map_forge(), map_laminoir(), map_ferraille())}
 
 
-def seg_clear(x1, y1, z1, x2, y2, z2, bi=None):
-    n = int(math.hypot(x2 - x1, y2 - y1) // 25) + 1
-    return not any(point_blocked(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n, z1 + (z2 - z1) * k / n, bi) for k in range(1, n))
-
-
-def physics(p, wx, wy, run, jump, dt, M, bi=None):
+def physics(p, wx, wy, run, jump, dt, M, mp):
     """Un pas de physique : accélération vers la vitesse voulue, inertie, saut, gravité, vol plané, collisions."""
     glide = p.get('gl')
     sp = GLIDE_SPEED if glide else WALK * M.get('speed', 1.0) * (SPRINT if run else 1.0)
@@ -290,34 +269,26 @@ def physics(p, wx, wy, run, jump, dt, M, bi=None):
         p['vz'] = max(p['vz'], -GLIDE_FALL)
     for axis, v in (('x', 'vx'), ('y', 'vy')):
         old = p[axis]
-        was = body_blocked(p['x'], p['y'], p['z'], bi)      # coincé dans une construction : on peut en sortir
         p[axis] += p[v] * dt
-        if not was and body_blocked(p['x'], p['y'], p['z'], bi):
+        if mp.body_blocked(p['x'], p['y'], p['z']):
             p[axis] = old
             p[v] = 0.0
     p['z'] += p['vz'] * dt
-    g = ground_at(p['x'], p['y'], max(p['z'], 0), bi)
+    g = mp.ground_at(p['x'], p['y'], max(p['z'], 0))
     if p['z'] <= g:
         p['z'], p['vz'], p['gd'] = float(g), 0.0, True
         p['gl'] = False
     else:
         p['gd'] = False
-    if p['z'] + BODY > CEIL:
-        p['z'], p['vz'] = CEIL - BODY, min(0.0, p['vz'])
+    if p['z'] + BODY > mp.ceil:
+        p['z'], p['vz'] = mp.ceil - BODY, min(0.0, p['vz'])
 
 
-def free_spot(rnd, margin=40):
-    for _ in range(500):
-        x, y = rnd.uniform(80, W - 80), rnd.uniform(80, H - 80)
-        if not any(abs(x - (o['x'] + o['w'] / 2)) < o['w'] / 2 + margin and abs(y - (o['y'] + o['h'] / 2)) < o['h'] / 2 + margin for o in around(x, y)):
-            return x, y
-    return W / 2, H / 2
-
-
-def roll_rarity(rnd):
-    r = rnd.uniform(0, sum(x[3] for x in RARITY))
-    for i, x in enumerate(RARITY):
-        r -= x[3]
+def roll_rarity(rnd, bonus=0):
+    weights = [x[3] * (1 + bonus * i) for i, x in enumerate(RARITY)]
+    r = rnd.uniform(0, sum(weights))
+    for i, w in enumerate(weights):
+        r -= w
         if r <= 0:
             return i
     return 0
@@ -336,41 +307,48 @@ class Royale:
 
     def __init__(self, seats):
         self.rnd = random.Random()
+        want = next(((s.get('opt') or {}).get('map') for s in seats if not s['bot'] and (s.get('opt') or {}).get('map')), None)
+        self.mp = MAPS.get(want) or self.rnd.choice(list(MAPS.values()))
+        mp = self.mp
         metiers = list(METIERS)
         self.p = []
         for i, s in enumerate(seats):
             m = (s.get('opt') or {}).get('char')
             if m not in METIERS:
                 m = metiers[i % len(metiers)] if s['bot'] else 'fondeur'
-            # chacun a sa place le long du pont roulant (axe y), qui avance ensuite le long de la halle (axe x)
-            y = 260 + (H - 520) * (i + 0.5) / len(seats) + self.rnd.uniform(-40, 40)
-            x = 200.0
+            # chacun a sa place le long du pont roulant (axe y), qui avance ensuite le long de la carte (axe x)
+            y = 260 + (mp.h - 520) * (i + 0.5) / len(seats) + self.rnd.uniform(-40, 40)
             M = METIERS[m]
-            self.p.append({'name': s['name'], 'bot': s['bot'], 'm': m, 'x': x, 'y': y, 'z': float(BUS_Z), 'bus': True, 'gl': False, 'lane': y,
-                           'mt': {k: 0 for k in MATS}, 'bcd': 0.0, 'vx': 0.0, 'vy': 0.0, 'vz': 0.0, 'gd': True,
-                           'yaw': self.rnd.uniform(-math.pi, math.pi), 'pitch': 0.0, 'hp': 100.0, 'ar': float(M.get('armor', 0)),
+            self.p.append({'name': s['name'], 'bot': s['bot'], 'm': m, 'x': 200.0, 'y': y, 'z': float(mp.bus_z), 'bus': True, 'gl': False, 'lane': y,
+                           'vx': 0.0, 'vy': 0.0, 'vz': 0.0, 'gd': False,
+                           'yaw': 0.0, 'pitch': 0.0, 'hp': 100.0, 'ar': float(M.get('armor', 0)),
                            'slots': [None, None], 'cur': 0, 'cd': 0.0, 'alive': True, 'kills': 0, 'died': None, 'by': None,
                            'swing': 0.0, 'tp': 1, 'srv': s['bot'], 'seen': 0.0, 'kbt': 0.0,
                            'ai': {'t': 0, 'goal': None, 'side': 1, 'react': 0, 'stuck': 0, 'last': None, 'drop': self.rnd.uniform(1.0, BUS_TIME - 1.5)}})
         self.inputs = [{'k': 0, 'press': 0} for _ in self.p]
         self.loot = []
         self.lid = 0
-        tops = [o for o in OBSTACLES if o['k'] in ('conteneur', 'bureau', 'moules')]
-        for n in range(96):
-            if n % 6 == 0 and tops:   # quelques armes sur les toits, pour ceux qui grimpent
+        # coffres : la plupart au sol, quelques-uns sur les toits pour ceux qui grimpent
+        self.chests = []
+        tops = [o for o in mp.obs if 60 <= o['z'] <= 230 and o['w'] >= 90 and o['h'] >= 90]
+        n_chests = int(mp.w * mp.h / 300000)
+        for n in range(n_chests):
+            if n % 7 == 0 and tops:
                 o = self.rnd.choice(tops)
-                self.spawn_loot(o['x'] + o['w'] / 2, o['y'] + o['h'] / 2, o['z'])
+                x, y, z = o['x'] + o['w'] / 2, o['y'] + o['h'] / 2, o['z']
             else:
-                x, y = free_spot(self.rnd, 30)
-                self.spawn_loot(x, y, 0)
+                (x, y), z = mp.free_spot(self.rnd, 45), 0
+            self.chests.append({'id': n, 'x': round(x), 'y': round(y), 'z': round(z), 'a': round(self.rnd.uniform(-math.pi, math.pi), 2),
+                                'open': False, 'bonus': 0.6 if z else 0.25})
+        self.chests_dirty = True
         self.proj = []
-        self.bi = Builds()
-        self.bid = 0
-        self.bchg, self.brm = set(), []
         self.crane = 200.0
         self.events, self.eid = [], 0
-        self.zone = {'cx': W / 2, 'cy': H / 2, 'r': 2700.0, 'phase': 0, 't': PHASES[0][0], 'shrink': False,
-                     'from': (W / 2, H / 2, 2700.0), 'to': None, 'dps': 0}
+        r0 = math.hypot(mp.w, mp.h) / 2 + 150
+        k = min(mp.w, mp.h) / 3000
+        self.phases = [(45, 25, 1850 * k, 1), (25, 22, 1120 * k, 3), (20, 20, 600 * k, 6), (15, 18, 240 * k, 10), (10, 15, 0, 16)]
+        self.zone = {'cx': mp.w / 2, 'cy': mp.h / 2, 'r': r0, 'phase': 0, 't': self.phases[0][0], 'shrink': False,
+                     'from': (mp.w / 2, mp.h / 2, r0), 'to': None, 'dps': 0}
         self.next_zone_target()
         self.phase, self.pt = 'count', COUNTDOWN
         self.time = 0.0
@@ -380,33 +358,78 @@ class Royale:
         self.finished = None
         self.dirty = True
 
-    # ---------------- butin (des armes, rien d'autre) ----------------
-    def spawn_loot(self, x, y, z, wid=None, rar=None):
+    # ---------------- butin : coffres et armes au sol ----------------
+    def spawn_loot(self, x, y, z, wid=None, rar=None, bonus=0.0):
         self.lid += 1
         self.loot.append({'id': self.lid, 'x': round(x), 'y': round(y), 'z': round(z),
-                          'w': wid or self.rnd.choice(LOOT_WEAPONS), 'r': roll_rarity(self.rnd) if rar is None else rar})
+                          'w': wid or self.rnd.choice(LOOT_WEAPONS), 'r': roll_rarity(self.rnd, bonus) if rar is None else rar})
         self.loot_dirty = True
+
+    def open_chest(self, i, c):
+        c['open'] = True
+        self.chests_dirty = True
+        for k in range(CHEST_ITEMS):
+            a = c['a'] + (k - (CHEST_ITEMS - 1) / 2) * 0.9
+            x, y = c['x'] + math.cos(a) * 46, c['y'] + math.sin(a) * 46
+            if self.mp.body_blocked(x, y, c['z']):
+                x, y = c['x'], c['y']
+            self.spawn_loot(x, y, self.mp.ground_at(x, y, c['z'] + 5), bonus=c['bonus'])
+        self.event('chest', c['x'], c['y'], c['z'], seat=i, cid=c['id'])
+
+    def interact(self, i):
+        """E : ramasse l'arme la plus proche, sinon ouvre le coffre le plus proche."""
+        p = self.p[i]
+        near = lambda o, r: (o['x'] - p['x']) ** 2 + (o['y'] - p['y']) ** 2 <= r * r and abs(o['z'] - p['z']) < 70
+        items = sorted((it for it in self.loot if near(it, REACH_ITEM)), key=lambda it: (it['x'] - p['x']) ** 2 + (it['y'] - p['y']) ** 2)
+        if items:
+            it = items[0]
+            slot = p['cur'] if p['slots'][p['cur']] is None else (1 - p['cur'] if p['slots'][1 - p['cur']] is None else p['cur'])
+            old = p['slots'][slot]
+            p['slots'][slot] = {'w': it['w'], 'r': it['r']}
+            p['cur'] = slot
+            self.loot.remove(it)
+            self.loot_dirty = True
+            if old:
+                self.spawn_loot(it['x'], it['y'], it['z'], old['w'], old['r'])
+            self.event('pick', p['x'], p['y'], p['z'], seat=i, w=it['w'], r=it['r'])
+            return
+        chests = sorted((c for c in self.chests if not c['open'] and near(c, REACH_CHEST)), key=lambda c: (c['x'] - p['x']) ** 2 + (c['y'] - p['y']) ** 2)
+        if chests:
+            self.open_chest(i, chests[0])
+
+    def drop_weapon(self, i):
+        """G : lâche l'arme tenue devant soi (on repasse aux poings)."""
+        p = self.p[i]
+        s = p['slots'][p['cur']]
+        if not s:
+            return
+        p['slots'][p['cur']] = None
+        x, y = p['x'] + math.cos(p['yaw']) * 40, p['y'] + math.sin(p['yaw']) * 40
+        if self.mp.body_blocked(x, y, p['z']):
+            x, y = p['x'], p['y']
+        self.spawn_loot(x, y, self.mp.ground_at(x, y, p['z'] + 5), s['w'], s['r'])
+        self.event('throw', p['x'], p['y'], p['z'], seat=i, w=s['w'])
 
     # ---------------- zone de fonte ----------------
     def next_zone_target(self):
-        z = self.zone
-        if z['phase'] >= len(PHASES):
+        z, mp = self.zone, self.mp
+        if z['phase'] >= len(self.phases):
             return
-        tr = PHASES[z['phase']][2]
+        tr = self.phases[z['phase']][2]
         for _ in range(50):
             a, d = self.rnd.uniform(0, math.tau), self.rnd.uniform(0, max(0, min(z['r'], 1500) - tr))
             cx, cy = z['cx'] + math.cos(a) * d, z['cy'] + math.sin(a) * d
-            if 400 < cx < W - 400 and 400 < cy < H - 400:
+            if 400 < cx < mp.w - 400 and 400 < cy < mp.h - 400:
                 break
         else:
-            cx, cy = W / 2, H / 2
+            cx, cy = mp.w / 2, mp.h / 2
         z['to'] = (cx, cy, float(tr))
 
     def update_zone(self, dt):
         z = self.zone
-        if z['phase'] >= len(PHASES):
+        if z['phase'] >= len(self.phases):
             return
-        wait, dur, _, dps = PHASES[z['phase']]
+        wait, dur, _, dps = self.phases[z['phase']]
         z['t'] -= dt
         if not z['shrink'] and z['t'] <= 0:
             z['shrink'], z['t'], z['from'] = True, dur, (z['cx'], z['cy'], z['r'])
@@ -419,21 +442,16 @@ class Royale:
             if z['t'] <= 0:
                 z['shrink'] = False
                 z['phase'] += 1
-                if z['phase'] < len(PHASES):
-                    z['t'] = PHASES[z['phase']][0]
+                if z['phase'] < len(self.phases):
+                    z['t'] = self.phases[z['phase']][0]
                     self.next_zone_target()
 
     # ---------------- entrées ----------------
     def handle(self, seat, data):
-        if seat >= len(self.p):
-            return
-        if data.get('a') == 'build':
-            self.try_build(seat, data)
-            return
-        if data.get('a') != 'input':
+        if seat >= len(self.p) or data.get('a') != 'input':
             return
         try:
-            k = int(data.get('k', 0)) & 511
+            k = int(data.get('k', 0)) & 1023
             yaw = float(data.get('yaw', 0.0))
             pitch = max(-1.45, min(1.45, float(data.get('pitch', 0.0))))
             pos = data.get('pos')
@@ -468,20 +486,19 @@ class Royale:
             return
         if not all(math.isfinite(v) for v in (x, y, z, vz)):
             return
+        mp = self.mp
         el = min(0.6, max(0.0, now - p['seen'])) if p['seen'] else 0.1
-        bi = self.bi
         allowed = (GLIDE_SPEED * 1.15 if p['gl'] else WALK * SPRINT * 1.12) * el + 30 + (180 if p['kbt'] > 0 else 0)
-        gz = ground_at(x, y, z, bi)
+        gz = mp.ground_at(x, y, z)
         p['air'] = 0.0 if p['gl'] or z <= gz + 2 else p.get('air', 0.0) + el
-        ok = (math.hypot(x - p['x'], y - p['y']) <= allowed and z >= 0
-              and not (body_blocked(x, y, z, bi) and not body_blocked(p['x'], p['y'], p['z'], bi))
+        ok = (math.hypot(x - p['x'], y - p['y']) <= allowed and z >= 0 and not mp.body_blocked(x, y, z)
               and z <= p['z'] + JUMP_V * 1.25 * el + STEP + 10      # on ne monte pas plus vite qu'un saut
               and (z <= gz + 95 or z <= p['z'] + 1)                  # très haut : seulement en retombant
               and p['air'] < 2.0)                                    # pas de vol plané hors largage
         if ok:
             p['vx'], p['vy'] = (x - p['x']) / max(el, 1 / FPS), (y - p['y']) / max(el, 1 / FPS)
             p['x'], p['y'], p['z'], p['vz'] = x, y, z, vz
-            p['gd'] = z <= ground_at(x, y, z, bi) + 1
+            p['gd'] = z <= mp.ground_at(x, y, z) + 1
             if p['gd']:
                 p['gl'] = False
         else:
@@ -489,53 +506,6 @@ class Royale:
             p['vx'] = p['vy'] = 0.0
             p['air'] = 0.0
         p['seen'] = now
-
-    def try_build(self, i, d):
-        p = self.p[i]
-        if self.phase != 'play' or not p['alive'] or p['bus'] or p['bcd'] > 0:
-            return
-        try:
-            t, m = d.get('piece'), d.get('m')
-            gx, gy, lv, dd = int(d.get('gx')), int(d.get('gy')), int(d.get('lv')), int(d.get('d', 0))
-        except (TypeError, ValueError):
-            return
-        if t not in ('mur', 'sol', 'rampe') or m not in MATS or p['mt'][m] < BUILD_COST or not 0 <= lv <= 3 or not 0 <= dd <= 3:
-            return
-        if t == 'mur' and dd >= 2:            # un mur à l'ouest d'une tuile = le mur à l'est de sa voisine
-            gx, gy, dd = (gx - 1, gy, 0) if dd == 2 else (gx, gy - 1, 1)
-        if t == 'sol':
-            dd = 0
-        if not (0 <= gx < W // TILE and 0 <= gy < H // TILE) or len(self.bi.items) >= MAX_BUILDS:
-            return
-        key = (t, gx, gy, lv, dd if t == 'mur' else 0)
-        if key in self.bi.keys:
-            return
-        b = {'id': 0, 't': t, 'gx': gx, 'gy': gy, 'lv': lv, 'd': dd, 'm': m, 'hp': float(BUILD_HP[m]), 'key': key}
-        bx = piece_box(b)
-        if math.hypot((bx[0] + bx[3]) / 2 - p['x'], (bx[1] + bx[4]) / 2 - p['y']) > 300 or abs(lv * LEVEL - p['z']) > LEVEL * 1.6:
-            return
-        if t != 'rampe':   # on ne bâtit pas à travers quelqu'un
-            for o in self.p:
-                if o['alive'] and not o['bus'] and bx[2] < o['z'] + BODY and bx[5] > o['z'] + STEP and box_touch(bx, o['x'], o['y'], PR - 2):
-                    return
-        self.bid += 1
-        b['id'] = self.bid
-        self.bi.add(b)
-        self.bchg.add(b['id'])
-        p['mt'][m] -= BUILD_COST
-        p['bcd'] = 0.1
-        self.event('build', (bx[0] + bx[3]) / 2, (bx[1] + bx[4]) / 2, bx[2], seat=i, t=t)
-
-    def hit_build(self, b, dmg):
-        b['hp'] -= dmg
-        if b['hp'] <= 0:
-            self.bi.remove(b)
-            self.brm.append(b['id'])
-            self.bchg.discard(b['id'])
-            bx = piece_box(b)
-            self.event('bbreak', (bx[0] + bx[3]) / 2, (bx[1] + bx[4]) / 2, (bx[2] + bx[5]) / 2, m=b['m'])
-        else:
-            self.bchg.add(b['id'])
 
     def tick(self, dt, connected):
         self.acc += dt
@@ -568,15 +538,15 @@ class Royale:
             return
         self.time += dt
         self.update_zone(dt)
-        z = self.zone
-        self.crane = 200 + (W - 400) * min(1.0, self.time / BUS_TIME)
+        z, mp = self.zone, self.mp
+        self.crane = 200 + (mp.w - 400) * min(1.0, self.time / BUS_TIME)
         for i, p in enumerate(self.p):
             if not p['alive']:
                 continue
             M = METIERS[p['m']]
             inp = self.inputs[i]
             if p['bus']:   # accroché au pont roulant : Espace pour sauter (automatique en bout de course)
-                p['x'], p['y'], p['z'], p['vx'], p['vy'], p['vz'] = self.crane, p['lane'], float(BUS_Z), 0.0, 0.0, 0.0
+                p['x'], p['y'], p['z'], p['vx'], p['vy'], p['vz'] = self.crane, p['lane'], float(mp.bus_z), 0.0, 0.0, 0.0
                 press = inp['press']
                 inp['press'] = 0
                 auto = (p['bot'] or not connected(i)) and self.time >= p['ai']['drop']
@@ -586,7 +556,6 @@ class Royale:
                     p['seen'] = time.monotonic()
                     self.event('drop', p['x'], p['y'], p['z'], seat=i)
                 continue
-            p['bcd'] = max(0.0, p['bcd'] - dt)
             if p['bot'] or not connected(i):
                 if not p['srv']:
                     p['srv'] = True
@@ -597,14 +566,17 @@ class Royale:
             inp['press'] = 0
             if p['srv']:
                 wx, wy = wish if wish else (0.0, 0.0)
-                physics(p, wx, wy, bool(k & RUN), bool(k & JUMP), dt, M, self.bi)
+                physics(p, wx, wy, bool(k & RUN), bool(k & JUMP), dt, M, mp)
             p['kbt'] = max(0.0, p['kbt'] - dt)
             if press & SWAP:
                 p['cur'] = 1 - p['cur']
-            self.pickup(i, manual=bool(press & PICK))
+            if press & PICK:
+                self.interact(i)
+            if press & DROP:
+                self.drop_weapon(i)
             p['cd'] -= dt
             p['swing'] = max(0.0, p['swing'] - dt)
-            if k & FIRE and p['cd'] <= 0:
+            if k & FIRE and p['cd'] <= 0 and not p['gl']:
                 self.attack(i)
             if math.hypot(p['x'] - z['cx'], p['y'] - z['cy']) > z['r']:
                 self.damage(None, i, max(1, z['dps']) * M.get('zone', 1.0) * dt, zone=True)
@@ -621,29 +593,8 @@ class Royale:
         s = p['slots'][p['cur']]
         return (s['w'], s['r']) if s else ('poings', 0)
 
-    def pickup(self, i, manual):
-        p = self.p[i]
-        for it in self.loot:
-            if (it['x'] - p['x']) ** 2 + (it['y'] - p['y']) ** 2 > 50 ** 2 or abs(it['z'] - p['z']) > 60:
-                continue
-            empty = [k for k in (0, 1) if p['slots'][k] is None]
-            if empty and not manual:
-                p['slots'][empty[0]] = {'w': it['w'], 'r': it['r']}
-                p['cur'] = empty[0]
-            elif manual:
-                old = p['slots'][p['cur']]
-                p['slots'][p['cur']] = {'w': it['w'], 'r': it['r']}
-                if old:
-                    self.spawn_loot(p['x'] + math.cos(p['yaw']) * 34, p['y'] + math.sin(p['yaw']) * 34, ground_at(p['x'], p['y'], p['z'], self.bi), old['w'], old['r'])
-            else:
-                continue
-            self.loot.remove(it)
-            self.loot_dirty = True
-            self.event('pick', p['x'], p['y'], p['z'], seat=i, w=it['w'], r=it['r'])
-            return
-
     def attack(self, i):
-        p = self.p[i]
+        p, mp = self.p[i], self.mp
         wid, rar = self.weapon(p)
         Wp = WEAPONS[wid]
         M = METIERS[p['m']]
@@ -656,13 +607,13 @@ class Royale:
             dmg = Wp['dmg'] * mult * M.get('melee', 1.0)
             self.event('swing', p['x'], p['y'], p['z'], seat=i, w=wid)
             for j, o in enumerate(self.p):
-                if j == i or not o['alive']:
+                if j == i or not o['alive'] or o['bus']:
                     continue
                 dx, dy = o['x'] - p['x'], o['y'] - p['y']
                 dist = math.hypot(dx, dy)
                 if dist > Wp['range'] + PR or abs(o['z'] - p['z']) > 75:
                     continue
-                if abs(wrap(math.atan2(dy, dx) - yaw)) <= Wp['arc'] / 2 + 0.3 and seg_clear(ex, ey, ez - 30, o['x'], o['y'], o['z'] + 55, self.bi):
+                if abs(wrap(math.atan2(dy, dx) - yaw)) <= Wp['arc'] / 2 + 0.3 and mp.seg_clear(ex, ey, ez - 30, o['x'], o['y'], o['z'] + 55):
                     self.damage(i, j, dmg)
                     if Wp.get('kb') and o['alive']:
                         kv = Wp['kb']
@@ -671,24 +622,6 @@ class Royale:
                         if o['srv']:
                             o['vx'] += kx; o['vy'] += ky; o['vz'] = 260; o['gd'] = False
                         self.event('kb', o['x'], o['y'], o['z'], seat=j, vx=round(kx), vy=round(ky), vz=260)
-            # devant soi : une construction (abîmée) ou le décor (récolte de matériaux)
-            cp = math.cos(pitch)
-            for step in range(2, int(Wp['range'] + 20) // 12 + 1):
-                d = step * 12
-                hx, hy, hz = ex + math.cos(yaw) * cp * d, ey + math.sin(yaw) * cp * d, ez - 20 + math.sin(pitch) * d
-                b = build_at(hx, hy, hz, self.bi)
-                if b:
-                    self.hit_build(b, dmg * 1.5)
-                    self.event('bhit', hx, hy, hz, m=b['m'])
-                    break
-                o = map_at(hx, hy, hz)
-                if o:
-                    mat = HARVEST.get(o['k'], 'acier')
-                    n = min(HARVEST_N, MAT_CAP - p['mt'][mat])
-                    if n > 0:
-                        p['mt'][mat] += n
-                        self.event('harvest', hx, hy, hz, seat=i, m=mat, n=n)
-                    break
             return
         dmg = Wp['dmg'] * mult * (M.get('fire', 1.0) if wid in ('chalumeau', 'louche') else 1.0)
         cp = math.cos(pitch)
@@ -703,7 +636,7 @@ class Royale:
 
     def body_hit(self, owner, x, y, z, rad):
         for j, o in enumerate(self.p):
-            if j != owner and o['alive'] and (o['x'] - x) ** 2 + (o['y'] - y) ** 2 < (PR + rad) ** 2 and o['z'] - rad <= z <= o['z'] + BODY + rad:
+            if j != owner and o['alive'] and not o['bus'] and (o['x'] - x) ** 2 + (o['y'] - y) ** 2 < (PR + rad) ** 2 and o['z'] - rad <= z <= o['z'] + BODY + rad:
                 return j, z >= o['z'] + HEAD
         return None, False
 
@@ -721,12 +654,7 @@ class Royale:
                 if pr[6] <= 0:
                     hit = 'fade'
                     break
-                b = build_at(pr[0], pr[1], pr[2], self.bi)
-                if b:
-                    self.hit_build(b, pr[8] * (0.5 if pr[9] == 'flame' else 1.0))
-                    hit = 'wall'
-                    break
-                if point_blocked(pr[0], pr[1], pr[2]):
+                if self.mp.point_blocked(pr[0], pr[1], pr[2]):
                     hit = 'wall'
                     break
                 j, head = self.body_hit(pr[7], pr[0], pr[1], pr[2], rad)
@@ -766,7 +694,7 @@ class Royale:
             if src is not None:
                 self.p[src]['kills'] += 1
                 self.p[src]['hp'] = min(100.0, self.p[src]['hp'] + KILL_HEAL)
-            g = ground_at(d['x'], d['y'], d['z'], self.bi)
+            g = self.mp.ground_at(d['x'], d['y'], d['z'])
             for s in d['slots']:
                 if s:
                     self.spawn_loot(d['x'] + self.rnd.uniform(-30, 30), d['y'] + self.rnd.uniform(-30, 30), g, s['w'], s['r'])
@@ -779,7 +707,7 @@ class Royale:
     # ---------------- robots ----------------
     def ai(self, i):
         """Décide des touches du robot ; renvoie la direction voulue (x, y) pour la physique."""
-        p = self.p[i]
+        p, mp = self.p[i], self.mp
         ai = p['ai']
         inp = self.inputs[i]
         ai['t'] -= 1
@@ -792,7 +720,7 @@ class Royale:
         reach = 220 if self.time < 30 else 480
         best, bd = None, 1e9
         for j, o in enumerate(self.p):
-            if j == i or not o['alive']:
+            if j == i or not o['alive'] or o['bus']:
                 continue
             d = math.hypot(o['x'] - p['x'], o['y'] - p['y'])
             foe = ai['alert'] > 0 and ai.get('foe') == j
@@ -803,7 +731,7 @@ class Royale:
         dz = math.hypot(p['x'] - z['cx'], p['y'] - z['cy'])
         target = None
         look = None
-        seen = best is not None and seg_clear(p['x'], p['y'], p['z'] + EYE, best['x'], best['y'], best['z'] + 60, self.bi)
+        seen = best is not None and not p['gl'] and mp.seg_clear(p['x'], p['y'], p['z'] + EYE, best['x'], best['y'], best['z'] + 60)
         if not seen:
             ai['react'] = 14 + self.rnd.randrange(14)      # temps de réaction quand quelqu'un apparaît
         if dz > z['r'] * 0.85 and (z['shrink'] or dz > z['r']):
@@ -833,30 +761,40 @@ class Royale:
             if bd < rng and ai['react'] <= 0 and self.rnd.random() < 0.7:
                 mask |= FIRE
         else:
-            if ai['goal'] is None or ai['goal'] not in self.loot or ai['t'] <= 0:
+            # va vers une arme au sol intéressante ou un coffre fermé
+            g = ai['goal']
+            stale = g is None or ai['t'] <= 0 or (g[0] == 'it' and g[1] not in self.loot) or (g[0] == 'ch' and g[1]['open'])
+            if stale:
                 cands = []
+                inside = lambda o: math.hypot(o['x'] - z['cx'], o['y'] - z['cy']) < z['r'] * 0.9 and o['z'] <= 40
+                cur = p['slots'][p['cur']]
                 for it in self.loot:
                     d = math.hypot(it['x'] - p['x'], it['y'] - p['y'])
-                    if d > 1100 or it['z'] > 40 or math.hypot(it['x'] - z['cx'], it['y'] - z['cy']) > z['r'] * 0.9:
+                    if d > 1100 or not inside(it):
                         continue
-                    cur = p['slots'][p['cur']]
                     val = 2 + it['r'] - (cur['r'] + 1 if cur else -1) if (None in p['slots'] or (cur and it['r'] > cur['r'])) else -1
                     if val > 0:
-                        cands.append((d / (val + 0.5), it))
-                ai['goal'] = min(cands, key=lambda c: c[0])[1] if cands else None
+                        cands.append((d / (val + 0.5), ('it', it)))
+                if None in p['slots'] or (cur and cur['r'] < 2):
+                    for c in self.chests:
+                        d = math.hypot(c['x'] - p['x'], c['y'] - p['y'])
+                        if not c['open'] and d < 1300 and inside(c):
+                            cands.append((d / 2.5, ('ch', c)))
+                ai['goal'] = g = min(cands, key=lambda c: c[0])[1] if cands else None
                 ai['t'] = 30
-            if ai['goal'] is not None:
-                g = ai['goal']
-                target = (g['x'], g['y'])
-                if math.hypot(g['x'] - p['x'], g['y'] - p['y']) < 44 and None not in p['slots']:
+            if g is not None:
+                o = g[1]
+                dist = math.hypot(o['x'] - p['x'], o['y'] - p['y'])
+                target = (o['x'], o['y'])
+                if dist < (REACH_ITEM - 12 if g[0] == 'it' else REACH_CHEST - 15) and self.frame % 2:
                     mask |= PICK
-                mask |= RUN if math.hypot(g['x'] - p['x'], g['y'] - p['y']) > 300 else 0
+                mask |= RUN if dist > 300 else 0
             else:
                 # rôde vers un point à lui dans la zone, et s'y poste un moment
                 ro = ai.get('roam')
                 if ro is None or ai.get('rt', 0) <= 0 or math.hypot(ro[0] - z['cx'], ro[1] - z['cy']) > z['r'] * 0.8:
                     a, d = self.rnd.uniform(0, math.tau), self.rnd.uniform(0.2, 0.75) * min(z['r'], 1800)
-                    ai['roam'] = ro = (min(W - 200, max(200, z['cx'] + math.cos(a) * d)), min(H - 200, max(200, z['cy'] + math.sin(a) * d)))
+                    ai['roam'] = ro = (min(mp.w - 200, max(200, z['cx'] + math.cos(a) * d)), min(mp.h - 200, max(200, z['cy'] + math.sin(a) * d)))
                     ai['rt'] = 30 * self.rnd.uniform(8, 16)
                 ai['rt'] -= 1
                 if math.hypot(ro[0] - p['x'], ro[1] - p['y']) > 60:
@@ -871,7 +809,7 @@ class Royale:
                 dx, dy = -dy * ai['side'], dx * ai['side']
                 if ai['stuck'] == 14:
                     mask |= JUMP
-            elif ai['last'] and math.hypot(p['x'] - ai['last'][0], p['y'] - ai['last'][1]) < 1.2 and math.hypot(dx, dy) > 20:
+            elif ai['last'] and math.hypot(p['x'] - ai['last'][0], p['y'] - ai['last'][1]) < 1.2 and math.hypot(dx, dy) > 20 and not p['gl']:
                 ai['stuck'] = 15
                 if self.rnd.random() < 0.3:
                     ai['side'] *= -1
@@ -895,10 +833,11 @@ class Royale:
         return True
 
     def init_payload(self):
-        return {'map': {'w': W, 'h': H, 'obs': OBSTACLES, 'ceil': CEIL},
+        mp = self.mp
+        return {'map': {'key': mp.key, 'title': mp.title, 'w': mp.w, 'h': mp.h, 'obs': mp.obs, 'ceil': mp.ceil, 'sky': mp.sky, 'busZ': mp.bus_z},
                 'phys': {'walk': WALK, 'sprint': SPRINT, 'accG': ACC_GROUND, 'accA': ACC_AIR, 'jump': JUMP_V, 'grav': GRAVITY,
                          'step': STEP, 'pr': PR, 'body': BODY, 'eye': EYE, 'head': HEAD, 'glide': GLIDE_SPEED, 'fall': GLIDE_FALL},
-                'build': {'tile': TILE, 'level': LEVEL, 'hp': BUILD_HP, 'cost': BUILD_COST, 'mats': MATS, 'busZ': BUS_Z, 'busTime': BUS_TIME},
+                'busTime': BUS_TIME, 'reach': {'item': REACH_ITEM, 'chest': REACH_CHEST},
                 'weapons': {k: {'name': v['name'], 'kind': v['kind'], 'grav': v.get('grav', 0)} for k, v in WEAPONS.items()},
                 'rarity': [{'name': r[0], 'mult': r[1], 'color': r[2]} for r in RARITY],
                 'metiers': {k: {'name': v['name'], 'color': v['color'], 'perk': v['perk'], 'speed': v.get('speed', 1), 'jump': v.get('jump', 1)}
@@ -911,7 +850,7 @@ class Royale:
             'p': [{'n': p['name'], 'm': p['m'], 'x': round(p['x'], 1), 'y': round(p['y'], 1), 'z': round(p['z'], 1),
                    'a': round(p['yaw'], 3), 'pt': round(p['pitch'], 2), 'hp': round(p['hp']), 'ar': round(p['ar']), 'al': p['alive'],
                    'k': p['kills'], 'b': p['bot'], 's': p['slots'], 'c': p['cur'], 'sw': p['swing'] > 0, 'by': p['by'], 'tp': p['tp'],
-                   'mt': [p['mt'][k] for k in MATS], 'bu': p['bus'], 'gl': p['gl']}
+                   'bu': p['bus'], 'gl': p['gl']}
                   for p in self.p],
             'pr': [[round(q[0]), round(q[1]), round(q[2]), round(q[3]), round(q[4]), round(q[5]), q[9], q[11]] for q in self.proj],
             'z': {'x': round(z['cx']), 'y': round(z['cy']), 'r': round(z['r']), 'sh': z['shrink'], 't': round(max(0, z['t'])),
@@ -919,17 +858,13 @@ class Royale:
             'ev': self.events[-14:],
             'alive': sum(1 for p in self.p if p['alive']),
             'finished': self.finished,
+            'crane': round(self.crane),
         }
-        out['crane'] = round(self.crane)
-        pack = lambda b: [b['id'], b['t'], b['gx'], b['gy'], b['lv'], b['d'], b['m'], round(b['hp'])]
         self.vcount = getattr(self, 'vcount', 0) + 1
-        if self.vcount % 45 == 1:   # liste complète de temps en temps, sinon seulement les changements
-            out['B'] = [pack(b) for b in self.bi.items.values()]
-        elif self.bchg or self.brm:
-            out['bc'] = [pack(self.bi.items[k]) for k in self.bchg if k in self.bi.items]
-            out['br'] = self.brm
-        self.bchg, self.brm = set(), []
-        if self.loot_dirty or self.frame % 90 == 0:
+        if self.chests_dirty or self.vcount % 45 == 1:
+            out['ch'] = [[c['id'], c['x'], c['y'], c['z'], c['a'], int(c['open'])] for c in self.chests]
+            self.chests_dirty = False
+        if self.loot_dirty or self.vcount % 45 == 1:
             out['loot'] = [[it['id'], it['x'], it['y'], it['z'], it['w'], it['r']] for it in self.loot]
             self.loot_dirty = False
         return out

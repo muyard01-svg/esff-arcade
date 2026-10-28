@@ -26,8 +26,8 @@ const RY_GUNS = ['riveteuse', 'grenaille', 'louche', 'chalumeau'];
 
 ONLINE.unshift({
   id: 'royale', title: 'Coulée Royale', tone: '#EC641E', label: 'FPS battle royale · jusqu\'à 16', tag: 'BATTLE ROYALE',
-  pitch: 'FPS à la 1re ou 3e personne : forgerons, fondeurs, soudeurs… tous les métiers de la métallurgie s\'affrontent dans une halle de fonderie que la fonte envahit. Saute du pont roulant, plane jusqu\'au sol, loote les armes, récolte bois, brique et acier pour bâtir murs, rampes et planchers. Le dernier debout gagne.',
-  how: '<b>ZQSD / WASD</b> se déplacer · <b>Maj</b> sprinter · <b>Espace</b> sauter · <b>souris</b> viser (clique dans le jeu pour la capturer) · <b>clic</b> frapper / tirer · <b>E</b> échanger avec l\'arme au sol · <b>1 / 2</b>, <b>Tab</b> ou <b>molette</b> changer d\'arme · <b>V</b> 1re / 3e personne. <b>Construction</b> : <b>3</b> mur, <b>4</b> rampe, <b>5</b> plancher (ou <b>B</b>), clic pour poser, <b>X</b> change de matériau, <b>1 / 2</b> reprend les armes. Frappe le décor en mêlée pour récolter bois, brique et acier. Au départ, <b>Espace</b> pour sauter du pont roulant. Tir à la tête x1,5, chaque élimination rend 25 PV.',
+  pitch: 'FPS à la 1re ou 3e personne : forgerons, fondeurs, soudeurs… tous les métiers de la métallurgie s\'affrontent dans une halle de fonderie que la fonte envahit. Saute du pont roulant, plane jusqu\'au sol, fouille les coffres pour t\'armer. Quatre cartes : halle de coulée, forge, laminoir et parc à ferraille. Le dernier debout gagne.',
+  how: '<b>ZQSD / WASD</b> se déplacer · <b>Maj</b> sprinter · <b>Espace</b> sauter · <b>souris</b> viser (clique dans le jeu pour la capturer) · <b>clic</b> frapper / tirer · <b>1 / 2</b>, <b>Tab</b> ou <b>molette</b> changer d\'arme · <b>V</b> 1re / 3e personne · <b>E</b> ouvrir un coffre / ramasser une arme · <b>G</b> lâcher l\'arme en main. Au départ, <b>Espace</b> pour sauter du pont roulant. Tir à la tête x1,5, chaque élimination rend 25 PV.',
 });
 HANDLERS.royale = () => updateRoyale();
 
@@ -40,6 +40,22 @@ function renderMetierPick(box, descEl) {
   box.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => {
     save.metier = b.dataset.m; persist();
     box.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); paint(); SFX.tick();
+  }));
+}
+
+const RY_MAPS = {
+  random: { name: 'Au hasard', desc: 'Une des quatre cartes, tirée au sort' },
+  halle: { name: 'Halle de coulée', desc: 'Fours, conteneurs et piles de moules sous la grande charpente' },
+  forge: { name: 'La Forge', desc: 'Îlots de marteaux-pilons, foyers, enclumes et cuves de trempe' },
+  laminoir: { name: 'Le Laminoir', desc: 'Une longue halle traversée par le train de laminage, bobines et brames' },
+  ferraille: { name: 'Parc à ferraille', desc: 'À ciel ouvert : tas de ferraille, cubes compactés, grues et bennes' },
+};
+function renderMapPick(box) {
+  if (!RY_MAPS[save.ryMap]) save.ryMap = 'random';
+  box.innerHTML = Object.entries(RY_MAPS).map(([id, m]) => `<button type="button" data-map="${id}" class="ry-map ${id === save.ryMap ? 'on' : ''}" title="${m.desc}"><b>${m.name}</b><small>${m.desc}</small></button>`).join('');
+  box.querySelectorAll('[data-map]').forEach(b => b.addEventListener('click', () => {
+    save.ryMap = b.dataset.map; persist();
+    box.querySelectorAll('[data-map]').forEach(x => x.classList.toggle('on', x === b)); SFX.tick();
   }));
 }
 
@@ -228,19 +244,19 @@ function startRoyaleClient() {
   const MAP = trackInfo.map, PH = trackInfo.phys;
   const CEIL = MAP.ceil || 700;
   stage.innerHTML = '';
-  $('#hudInfo').textContent = 'Battle royale FPS';
+  $('#hudInfo').textContent = `Battle royale · ${MAP.title || ''}`;
   const wrap = document.createElement('div'); wrap.className = 'play-wrap'; stage.appendChild(wrap);
   const screen = document.createElement('div'); screen.className = 'tk-screen ry-screen'; wrap.appendChild(screen);
   const { c: cv, g } = makeCanvas(screen, W, H);
   cv.classList.add('tk-hud');
   const pad = document.createElement('div'); pad.className = 'touch-pad ry-pad';
   pad.innerHTML = `<div class="ry-stick" id="ryMove"><i></i></div>
-    <div class="grp"><button data-b="jump">SAUT</button><button data-b="pick">PRENDRE</button><button data-b="swap">ARME</button><button data-b="build">BÂTIR</button><button data-b="mat">MAT.</button><button data-b="view">VUE</button></div>
+    <div class="grp"><button data-b="jump">SAUT</button><button data-b="pick">PRENDRE</button><button data-b="swap">ARME</button><button data-b="drop">LÂCHER</button><button data-b="view">VUE</button></div>
     <button class="hot ry-fire" data-b="fire">TIR</button>
     <div class="ry-stick" id="ryAim"><i></i></div>`;
   wrap.appendChild(pad);
   const hint = document.createElement('p'); hint.className = 'keys-hint';
-  hint.textContent = 'CLIQUE POUR CAPTURER LA SOURIS · ZQSD BOUGER · MAJ SPRINT · ESPACE SAUT · CLIC TIRER · E ÉCHANGER · 1/2 ARME · 3/4/5 MUR/RAMPE/PLANCHER · X MATÉRIAU · V VUE';
+  hint.textContent = 'CLIQUE POUR CAPTURER LA SOURIS · ZQSD BOUGER · MAJ SPRINT · ESPACE SAUT · CLIC TIRER · E OUVRIR / PRENDRE · G LÂCHER · 1/2 ARME · V VUE';
   wrap.appendChild(hint);
 
   /* ---------- collisions (mêmes règles que le serveur) ---------- */
@@ -257,60 +273,16 @@ function startRoyaleClient() {
     return out;
   };
   const touches = (o, x, y, r) => { const nx = Math.min(Math.max(x, o.x), o.x + o.w), ny = Math.min(Math.max(y, o.y), o.y + o.h); return (x - nx) ** 2 + (y - ny) ** 2 < r * r; };
-  // constructions (mêmes règles que royale.py) : tuiles de TILE, étages de LEVEL
-  const BT = trackInfo.build || { tile: 150, level: 150, cost: 10, mats: ['bois', 'brique', 'acier'], busZ: 560, busTime: 16 };
-  const TILE = BT.tile, LEVEL = BT.level;
-  const builds = new Map(), btiles = new Map();
-  const bTilesOf = b => b.t === 'mur' ? [[b.gx, b.gy], b.d === 0 ? [b.gx + 1, b.gy] : [b.gx, b.gy + 1]] : [[b.gx, b.gy]];
-  const bIndex = (b, add) => bTilesOf(b).forEach(([x, y]) => {
-    const k = x + ',' + y;
-    if (add) { if (!btiles.has(k)) btiles.set(k, []); btiles.get(k).push(b); }
-    else { const l = btiles.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } }
-  });
-  const bNear = (x, y, r = 0) => {
-    const out = new Set();
-    for (let gx = Math.floor((x - r) / TILE); gx <= Math.floor((x + r) / TILE); gx++)
-      for (let gy = Math.floor((y - r) / TILE); gy <= Math.floor((y + r) / TILE); gy++) (btiles.get(gx + ',' + gy) || []).forEach(b => out.add(b));
-    return out;
-  };
-  const pieceBox = b => {
-    const x0 = b.gx * TILE, y0 = b.gy * TILE, base = b.lv * LEVEL;
-    if (b.t === 'mur') return b.d === 0 ? [x0 + TILE - 5, y0, base, x0 + TILE + 5, y0 + TILE, base + LEVEL] : [x0, y0 + TILE - 5, base, x0 + TILE, y0 + TILE + 5, base + LEVEL];
-    if (b.t === 'sol') return [x0, y0, base - 8, x0 + TILE, y0 + TILE, base];
-    return [x0, y0, base, x0 + TILE, y0 + TILE, base + LEVEL];
-  };
-  const rampH = (b, x, y) => {
-    const fx = Math.min(1, Math.max(0, (x - b.gx * TILE) / TILE)), fy = Math.min(1, Math.max(0, (y - b.gy * TILE) / TILE));
-    return b.lv * LEVEL + LEVEL * [fx, fy, 1 - fx, 1 - fy][b.d];
-  };
-  const boxTouch = (bx, x, y, r) => { const nx = Math.min(Math.max(x, bx[0]), bx[3]), ny = Math.min(Math.max(y, bx[1]), bx[4]); return (x - nx) ** 2 + (y - ny) ** 2 < r * r; };
-  const inTile = (b, x, y) => b.gx * TILE <= x && x <= (b.gx + 1) * TILE && b.gy * TILE <= y && y <= (b.gy + 1) * TILE;
-  const groundAt = (x, y, z) => {
-    let gz = 0;
-    for (const o of around(x, y)) if (o.z <= z + PH.step && o.z > gz && touches(o, x, y, PH.pr * 0.7)) gz = o.z;
-    for (const b of bNear(x, y, PH.pr)) {
-      if (b.t === 'sol') { const top = b.lv * LEVEL; if (gz < top && top <= z + PH.step && boxTouch(pieceBox(b), x, y, PH.pr * 0.7)) gz = top; }
-      else if (b.t === 'rampe' && inTile(b, x, y)) { const h = rampH(b, x, y); if (gz < h && h <= z + PH.step) gz = h; }
-    }
-    return gz;
-  };
+  const groundAt = (x, y, z) => { let gz = 0; for (const o of around(x, y)) if (o.z <= z + PH.step && o.z > gz && touches(o, x, y, PH.pr * 0.7)) gz = o.z; return gz; };
   const bodyBlocked = (x, y, z) => {
     if (x < PH.pr || y < PH.pr || x > MAP.w - PH.pr || y > MAP.h - PH.pr) return true;
     for (const o of around(x, y)) if (o.z > z + PH.step && touches(o, x, y, PH.pr - 1)) return true;
-    for (const b of bNear(x, y, PH.pr)) if (b.t !== 'rampe') { const bx = pieceBox(b); if (bx[2] < z + PH.body && bx[5] > z + PH.step && boxTouch(bx, x, y, PH.pr - 1)) return true; }
     return false;
-  };
-  const buildAt = (x, y, z) => {
-    for (const b of bNear(x, y)) {
-      if (b.t === 'rampe') { if (inTile(b, x, y) && Math.abs(z - rampH(b, x, y)) < 9) return b; }
-      else { const bx = pieceBox(b); if (bx[0] <= x && x <= bx[3] && bx[1] <= y && y <= bx[4] && bx[2] <= z && z <= bx[5]) return b; }
-    }
-    return null;
   };
   const pointBlocked = (x, y, z) => {
     if (x < 0 || y < 0 || x > MAP.w || y > MAP.h || z < 0 || z > CEIL) return true;
     for (const o of (GRID.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || [])) if (o.x <= x && x <= o.x + o.w && o.y <= y && y <= o.y + o.h && z <= o.z) return true;
-    return !!buildAt(x, y, z);
+    return false;
   };
   const segClear = (x1, y1, z1, x2, y2, z2) => {
     const n = Math.floor(Math.hypot(x2 - x1, y2 - y1) / 40) + 1;
@@ -329,11 +301,8 @@ function startRoyaleClient() {
     if (jump && me.gd) { me.vz = PH.jump * (M.jump || 1); me.gd = false; sfx(220, 0.08, 'triangle', 0.03, 120); }
     me.vz -= PH.grav * dt;
     if (me.gl) me.vz = Math.max(me.vz, -(PH.fall || 200));
-    // coincé dans une construction (posée sur soi) : on peut toujours en sortir
-    let was = bodyBlocked(me.x, me.y, me.z);
-    const ox = me.x; me.x += me.vx * dt; if (!was && bodyBlocked(me.x, me.y, me.z)) { me.x = ox; me.vx = 0; }
-    was = bodyBlocked(me.x, me.y, me.z);
-    const oy = me.y; me.y += me.vy * dt; if (!was && bodyBlocked(me.x, me.y, me.z)) { me.y = oy; me.vy = 0; }
+    const ox = me.x; me.x += me.vx * dt; if (bodyBlocked(me.x, me.y, me.z)) { me.x = ox; me.vx = 0; }
+    const oy = me.y; me.y += me.vy * dt; if (bodyBlocked(me.x, me.y, me.z)) { me.y = oy; me.vy = 0; }
     const wasAir = !me.gd, fall = me.vz;
     me.z += me.vz * dt;
     const gz = groundAt(me.x, me.y, Math.max(me.z, 0));
@@ -344,17 +313,13 @@ function startRoyaleClient() {
 
   let mode = save.ryView === 'tps' ? 'tps' : 'fps';
   let prev = null, cur = null, curAt = 0, prevAt = 0, seenEv = 0;
-  let loot = [];
+  let loot = [], chestList = [];
   const floats = [], feed = [], dmgDirs = [];
   let shake = 0, banner = '', bannerAt = 0, hitMark = 0, hitHead = false, landKick = 0, recoil = 0, swingVm = 0, bob = 0, stepAcc = 0;
   let swayX = 0, swayY = 0;
-  let build = null, lastPiece = 'mur', matSel = 0, placeHeld = false, lastPlace = 0;
-  const PIECES = { mur: 'MUR', rampe: 'RAMPE', sol: 'PLANCHER' };
-  const MAT_COL = { bois: '#c08a4c', brique: '#c4553a', acier: '#9aa4ae' };
-  const setBuild = b => { build = b; if (b) lastPiece = b; fireHeld = false; sendInput(true); SFX.tick(); };
 
   /* ---------- entrées ---------- */
-  const B = { FIRE: 16, PICK: 32, SWAP: 64, JUMP: 128, RUN: 256 };
+  const B = { FIRE: 16, PICK: 32, SWAP: 64, JUMP: 128, RUN: 256, DROP: 512 };
   const held = new Set();
   let fireHeld = false, jumpQueued = false, mask = 0, lastSend = 0, sentMask = -1, touchMove = null, touchLook = null;
   const pressBits = { v: 0 };
@@ -363,7 +328,7 @@ function startRoyaleClient() {
   function sendInput(force) {
     const now = performance.now();
     const live = cur && cur.phase === 'play' && cur.p[mySeat] && cur.p[mySeat].al && !cur.p[mySeat].bu;
-    mask = (fireHeld && !build ? B.FIRE : 0) | (held.has('ShiftLeft') || held.has('ShiftRight') ? B.RUN : 0) | pressBits.v;
+    mask = (fireHeld ? B.FIRE : 0) | (held.has('ShiftLeft') || held.has('ShiftRight') ? B.RUN : 0) | pressBits.v;
     if (!force && mask === sentMask && now - lastSend < 50) return;
     const msg = { t: 'act', a: 'input', k: mask, yaw: +me.yaw.toFixed(3), pitch: +me.pitch.toFixed(3), tp: me.tp };
     if (live) msg.pos = [+me.x.toFixed(1), +me.y.toFixed(1), +me.z.toFixed(1), Math.round(me.vz)];
@@ -379,12 +344,8 @@ function startRoyaleClient() {
     if (e.repeat) return;
     if (e.code === 'KeyE') { e.preventDefault(); tap(B.PICK); }
     else if (e.code === 'Tab') { e.preventDefault(); tap(B.SWAP); }
-    else if (e.code === 'Digit1' || e.code === 'Digit2') { if (build) setBuild(null); const want = e.code === 'Digit1' ? 0 : 1; const p = cur && cur.p[mySeat]; if (p && p.c !== want) tap(B.SWAP); }
-    else if (e.code === 'Digit3') setBuild('mur');
-    else if (e.code === 'Digit4') setBuild('rampe');
-    else if (e.code === 'Digit5') setBuild('sol');
-    else if (e.code === 'KeyB') setBuild(build ? null : lastPiece);
-    else if (e.code === 'KeyX') { matSel = (matSel + 1) % 3; SFX.tick(); }
+    else if (e.code === 'Digit1' || e.code === 'Digit2') { const want = e.code === 'Digit1' ? 0 : 1; const p = cur && cur.p[mySeat]; if (p && p.c !== want) tap(B.SWAP); }
+    else if (e.code === 'KeyG') { e.preventDefault(); tap(B.DROP); }
   };
   const ku = e => { held.delete(e.code); };
   // Échap sert d'abord à libérer la souris : on ne ferme pas la borne dans la foulée
@@ -409,16 +370,13 @@ function startRoyaleClient() {
       try { const r = screen.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) { /* pas de capture possible : on vise en glissant */ }
       dragging = true;
     }
-    if (e.button === 0 || document.pointerLockElement === screen) { if (build) { placeHeld = true; lastPlace = 0; } else { fireHeld = true; sendInput(true); } }
+    if (e.button === 0 || document.pointerLockElement === screen) { fireHeld = true; sendInput(true); }
   });
   const onMove = e => { if (document.pointerLockElement === screen || dragging) look(e.movementX || 0, e.movementY || 0); };
-  const onUp = e => { if (e.pointerType === 'touch') return; dragging = false; placeHeld = false; if (fireHeld && !touchFire) { fireHeld = false; sendInput(true); } };
+  const onUp = e => { if (e.pointerType === 'touch') return; dragging = false; if (fireHeld && !touchFire) { fireHeld = false; sendInput(true); } };
   document.addEventListener('mousemove', onMove);
   window.addEventListener('mouseup', onUp);
-  screen.addEventListener('wheel', e => {
-    e.preventDefault();
-    if (build) { const order = ['mur', 'rampe', 'sol']; setBuild(order[(order.indexOf(build) + (e.deltaY > 0 ? 1 : 2)) % 3]); } else tap(B.SWAP);
-  }, { passive: false });
+  screen.addEventListener('wheel', e => { e.preventDefault(); tap(B.SWAP); }, { passive: false });
   screen.addEventListener('contextmenu', e => e.preventDefault());
   // tactile : joystick de déplacement, joystick de visée, boutons
   let touchFire = false;
@@ -445,11 +403,10 @@ function startRoyaleClient() {
       const k = b.dataset.b;
       if (k === 'pick') tap(B.PICK); else if (k === 'swap') tap(B.SWAP); else if (k === 'view') toggleView();
       else if (k === 'jump') jumpQueued = true;
-      else if (k === 'build') { const order = [null, 'mur', 'rampe', 'sol']; setBuild(order[(order.indexOf(build) + 1) % 4]); b.textContent = build ? PIECES[build] : 'BÂTIR'; }
-      else if (k === 'mat') { matSel = (matSel + 1) % 3; SFX.tick(); }
-      else if (k === 'fire') { if (build) { placeHeld = true; lastPlace = 0; } else { touchFire = fireHeld = true; sendInput(true); } b.classList.add('on'); }
+      else if (k === 'drop') tap(B.DROP);
+      else if (k === 'fire') { touchFire = fireHeld = true; sendInput(true); b.classList.add('on'); }
     });
-    if (b.dataset.b === 'fire') ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, () => { placeHeld = false; touchFire = fireHeld = false; b.classList.remove('on'); sendInput(true); }));
+    if (b.dataset.b === 'fire') ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, () => { touchFire = fireHeld = false; b.classList.remove('on'); sendInput(true); }));
   });
 
   function toggleView() {
@@ -467,70 +424,104 @@ function startRoyaleClient() {
   const canvas = renderer.domElement; canvas.className = 'tk-3d'; canvas.dataset.overlay = '1';
   screen.insertBefore(canvas, cv);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#1a120d');
-  scene.fog = new THREE.Fog('#1a120d', 700, 2900);
-  const cam = new THREE.PerspectiveCamera(72, W / H, 2, 3400);
-  scene.add(new THREE.HemisphereLight('#ffe8d0', '#3a1c0c', 0.85));
-  const sun = new THREE.DirectionalLight('#ffd8b0', 0.55); sun.position.set(0.4, 1, 0.25); scene.add(sun);
-  // sol de béton, allées jaunes, taches d'huile
-  const floorTex = tkTexture(1100, 750, (b, w, h) => {
+  const SKY = !!MAP.sky;
+  scene.background = new THREE.Color(SKY ? '#9db4c8' : '#1a120d');
+  scene.fog = new THREE.Fog(SKY ? '#b9c6cf' : '#1a120d', SKY ? 1200 : 700, SKY ? 4200 : 2900);
+  const cam = new THREE.PerspectiveCamera(72, W / H, 2, SKY ? 6000 : 3400);
+  scene.add(new THREE.HemisphereLight(SKY ? '#e8f0ff' : '#ffe8d0', SKY ? '#5a4632' : '#3a1c0c', SKY ? 1.0 : 0.85));
+  const sun = new THREE.DirectionalLight(SKY ? '#fff6e6' : '#ffd8b0', SKY ? 0.9 : 0.55); sun.position.set(0.4, 1, 0.25); scene.add(sun);
+  // sol propre à chaque carte
+  const FLOOR = {
+    halle: { base: '#4a4440', lines: [[0, 1100, MAP.w, 1100], [0, 1900, MAP.w, 1900], [800, 0, 800, MAP.h], [3500, 0, 3500, MAP.h]] },
+    forge: { base: '#3a3330', lines: [[0, MAP.h / 2, MAP.w, MAP.h / 2], [MAP.w / 2, 0, MAP.w / 2, MAP.h]], soot: true },
+    laminoir: { base: '#55524e', lines: [[0, MAP.h / 2 - 220, MAP.w, MAP.h / 2 - 220], [0, MAP.h / 2 + 220, MAP.w, MAP.h / 2 + 220]] },
+    ferraille: { base: '#6b5a44', lines: [], dirt: true },
+  }[MAP.key] || { base: '#4a4440', lines: [] };
+  const floorTex = tkTexture(1100, Math.round(1100 * MAP.h / MAP.w), (b, w, h) => {
     const k = w / MAP.w;
-    b.fillStyle = '#4a4440'; b.fillRect(0, 0, w, h);
-    for (let x = 0; x < MAP.w; x += 200) for (let y = 0; y < MAP.h; y += 200) { b.fillStyle = `rgba(0,0,0,${0.03 + ((x * 7 + y * 13) % 5) * 0.015})`; b.fillRect(x * k + 1, y * k + 1, 200 * k - 2, 200 * k - 2); }
-    for (let i = 0; i < 260; i++) { b.fillStyle = `rgba(20,14,10,${0.08 + Math.random() * 0.12})`; b.beginPath(); b.ellipse(Math.random() * w, Math.random() * h, 3 + Math.random() * 14, 2 + Math.random() * 8, Math.random() * 3, 0, Math.PI * 2); b.fill(); }
+    b.fillStyle = FLOOR.base; b.fillRect(0, 0, w, h);
+    if (FLOOR.dirt) {
+      for (let i = 0; i < 1400; i++) { b.fillStyle = `rgba(${Math.random() < 0.5 ? '40,30,20' : '150,130,100'},${0.05 + Math.random() * 0.1})`; b.beginPath(); b.arc(Math.random() * w, Math.random() * h, 1 + Math.random() * 6, 0, Math.PI * 2); b.fill(); }
+      for (let i = 0; i < 30; i++) { b.fillStyle = 'rgba(70,90,110,.35)'; b.beginPath(); b.ellipse(Math.random() * w, Math.random() * h, 8 + Math.random() * 20, 4 + Math.random() * 10, Math.random() * 3, 0, Math.PI * 2); b.fill(); }
+    } else for (let x = 0; x < MAP.w; x += 200) for (let y = 0; y < MAP.h; y += 200) { b.fillStyle = `rgba(0,0,0,${0.03 + ((x * 7 + y * 13) % 5) * 0.015})`; b.fillRect(x * k + 1, y * k + 1, 200 * k - 2, 200 * k - 2); }
+    for (let i = 0; i < (FLOOR.soot ? 520 : 260); i++) { b.fillStyle = `rgba(20,14,10,${0.08 + Math.random() * 0.12})`; b.beginPath(); b.ellipse(Math.random() * w, Math.random() * h, 3 + Math.random() * 14, 2 + Math.random() * 8, Math.random() * 3, 0, Math.PI * 2); b.fill(); }
     b.strokeStyle = 'rgba(245,183,0,.75)'; b.lineWidth = 3; b.setLineDash([16, 10]);
-    [[0, 1100, MAP.w, 1100], [0, 1900, MAP.w, 1900], [800, 0, 800, MAP.h], [3500, 0, 3500, MAP.h]].forEach(([a, c, d, e]) => { b.beginPath(); b.moveTo(a * k, c * k); b.lineTo(d * k, e * k); b.stroke(); });
+    FLOOR.lines.forEach(([a, c, d, e]) => { b.beginPath(); b.moveTo(a * k, c * k); b.lineTo(d * k, e * k); b.stroke(); });
     b.setLineDash([]);
-    b.font = `900 ${Math.round(120 * k * 3)}px "Big Shoulders Display", Impact`; b.fillStyle = 'rgba(255,255,255,.09)'; b.textAlign = 'center';
-    b.fillText('ESFF · HALLE DE COULÉE 101', w / 2, h / 2 + 330 * k);
+    b.font = `900 ${Math.round(90 * k * 3)}px "Big Shoulders Display", Impact`; b.fillStyle = 'rgba(255,255,255,.09)'; b.textAlign = 'center';
+    b.fillText(`ESFF 101 · ${(MAP.title || '').toUpperCase()}`, w / 2, h / 2 + 330 * k);
   });
   floorTex.anisotropy = 4;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, MAP.h), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.92 }));
   floor.rotation.x = -Math.PI / 2; floor.position.set(MAP.w / 2, 0, MAP.h / 2); scene.add(floor);
-  // toiture : tôle sombre, fermes métalliques et verrières
-  const roof = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, MAP.h), new THREE.MeshStandardMaterial({ color: '#221c19', roughness: 1 }));
-  roof.rotation.x = Math.PI / 2; roof.position.set(MAP.w / 2, CEIL, MAP.h / 2); scene.add(roof);
-  const beamMat = ryMat('#3a3d42', { metalness: 0.6, roughness: 0.5 }), skyMat = new THREE.MeshBasicMaterial({ color: '#c9d6e0' });
-  for (let x = 300; x < MAP.w; x += 600) {
-    const bm = new THREE.Mesh(new THREE.BoxGeometry(24, 40, MAP.h), beamMat); bm.position.set(x, CEIL - 20, MAP.h / 2); scene.add(bm);
-    const sk = new THREE.Mesh(new THREE.PlaneGeometry(180, MAP.h - 400), skyMat); sk.rotation.x = Math.PI / 2; sk.position.set(x + 300, CEIL - 1, MAP.h / 2); scene.add(sk);
+  if (!SKY) {   // toiture : tôle sombre, fermes métalliques et verrières
+    const roof = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, MAP.h), new THREE.MeshStandardMaterial({ color: '#221c19', roughness: 1 }));
+    roof.rotation.x = Math.PI / 2; roof.position.set(MAP.w / 2, CEIL, MAP.h / 2); scene.add(roof);
+    const beamMat = ryMat('#3a3d42', { metalness: 0.6, roughness: 0.5 }), skyMat = new THREE.MeshBasicMaterial({ color: '#c9d6e0' });
+    for (let x = 300; x < MAP.w; x += 600) {
+      const bm = new THREE.Mesh(new THREE.BoxGeometry(24, 40, MAP.h), beamMat); bm.position.set(x, CEIL - 20, MAP.h / 2); scene.add(bm);
+      const sk = new THREE.Mesh(new THREE.PlaneGeometry(180, MAP.h - 400), skyMat); sk.rotation.x = Math.PI / 2; sk.position.set(x + 300, CEIL - 1, MAP.h / 2); scene.add(sk);
+    }
   }
   // obstacles avec textures dessinées
+  const stripes = (b, w, y, hh) => { b.fillStyle = '#F5B700'; b.fillRect(0, y, w, hh); b.fillStyle = '#1a1a1a'; for (let x = -hh; x < w; x += hh * 2) { b.beginPath(); b.moveTo(x, y + hh); b.lineTo(x + hh, y); b.lineTo(x + hh * 1.6, y); b.lineTo(x + hh * 0.6, y + hh); b.fill(); } };
   const T = {
     conteneur: tkTexture(256, 128, (b, w, h) => { b.fillStyle = '#9e2430'; b.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 16) { b.fillStyle = 'rgba(255,255,255,.08)'; b.fillRect(x, 0, 6, h); b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(x + 8, 0, 4, h); } b.fillStyle = 'rgba(255,255,255,.65)'; b.font = '900 22px Archivo, sans-serif'; b.fillText('ESFF 101', 18, 40); b.fillStyle = 'rgba(0,0,0,.25)'; b.fillRect(0, h - 8, w, 8); }),
     moules: tkTexture(128, 128, (b, w, h) => { b.fillStyle = '#8b6a46'; b.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 32) { b.fillStyle = 'rgba(0,0,0,.28)'; b.fillRect(0, y, w, 3); b.fillStyle = 'rgba(255,230,190,.12)'; b.fillRect(0, y + 3, w, 3); } for (let i = 0; i < 300; i++) { b.fillStyle = `rgba(${Math.random() < 0.5 ? '0,0,0' : '255,240,210'},.08)`; b.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }),
     mur: tkTexture(256, 256, (b, w, h) => { b.fillStyle = '#5c6067'; b.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 12) { b.fillStyle = 'rgba(255,255,255,.06)'; b.fillRect(x, 0, 5, h); b.fillStyle = 'rgba(0,0,0,.15)'; b.fillRect(x + 6, 0, 3, h); } b.fillStyle = '#3a3634'; b.fillRect(0, h - 40, w, 40); b.fillStyle = '#F5B700'; for (let x = 0; x < w; x += 32) { b.beginPath(); b.moveTo(x, h - 40); b.lineTo(x + 16, h - 40); b.lineTo(x + 8, h - 32); b.fill(); } }),
+    cloture: tkTexture(128, 128, (b, w, h) => { b.fillStyle = '#7a7f86'; b.fillRect(0, 0, w, h); b.strokeStyle = 'rgba(40,40,40,.55)'; b.lineWidth = 2; for (let k = -w; k < w * 2; k += 14) { b.beginPath(); b.moveTo(k, 0); b.lineTo(k + h, h); b.moveTo(k + h, 0); b.lineTo(k, h); b.stroke(); } b.fillStyle = '#4a4e54'; b.fillRect(0, 0, w, 8); }),
     bureau: tkTexture(256, 128, (b, w, h) => { b.fillStyle = '#2b4fa8'; b.fillRect(0, 0, w, h); for (let x = 12; x < w; x += 60) { b.fillStyle = '#9fd0ff'; b.fillRect(x, 26, 44, 40); b.fillStyle = 'rgba(255,255,255,.35)'; b.fillRect(x, 26, 44, 6); } b.fillStyle = '#fff'; b.font = '900 18px Archivo'; b.fillText('BUREAUX · LABO', 12, 100); }),
+    cabine: tkTexture(256, 128, (b, w, h) => { b.fillStyle = '#3a3d42'; b.fillRect(0, 0, w, h); b.fillStyle = '#9fd0ff'; b.fillRect(10, 18, w - 20, 54); b.fillStyle = 'rgba(255,255,255,.3)'; b.fillRect(10, 18, w - 20, 10); stripes(b, w, h - 22, 22); }),
     palette: tkTexture(128, 64, (b, w, h) => { b.fillStyle = '#6b4c2c'; b.fillRect(0, 0, w, h); b.fillStyle = '#a07a4c'; for (let x = 4; x < w; x += 24) b.fillRect(x, 0, 18, h); }),
+    etabli: tkTexture(128, 64, (b, w, h) => { b.fillStyle = '#8b6a46'; b.fillRect(0, 0, w, h); b.fillStyle = '#5c4630'; b.fillRect(0, 0, w, 12); b.fillStyle = '#4a4e54'; b.fillRect(10, 24, 30, 10); b.fillRect(70, 30, 40, 8); }),
     convoyeur: tkTexture(128, 64, (b, w, h) => { b.fillStyle = '#26292d'; b.fillRect(0, 0, w, h); b.fillStyle = '#5c6067'; for (let x = 0; x < w; x += 16) b.fillRect(x, 6, 8, h - 12); b.fillStyle = '#F5B700'; b.fillRect(0, 0, w, 4); b.fillRect(0, h - 4, w, 4); }),
+    barres: tkTexture(128, 64, (b, w, h) => { b.fillStyle = '#2b2e33'; b.fillRect(0, 0, w, h); for (let y = 4; y < h; y += 8) { b.fillStyle = `hsl(20,${10 + Math.random() * 20}%,${30 + Math.random() * 15}%)`; b.fillRect(0, y, w, 6); } }),
+    brames: tkTexture(128, 64, (b, w, h) => { for (let y = 0; y < h; y += 16) { b.fillStyle = `hsl(${15 + Math.random() * 10},45%,${26 + Math.random() * 10}%)`; b.fillRect(0, y, w, 14); b.fillStyle = 'rgba(0,0,0,.4)'; b.fillRect(0, y + 14, w, 2); } }),
+    cube: tkTexture(64, 64, (b, w, h) => { const c = ['#BA2C3A', '#2b6cb0', '#7FD48A', '#F5B700', '#9aa0a6', '#5c4630']; for (let i = 0; i < 26; i++) { b.fillStyle = c[i % c.length]; b.fillRect(Math.random() * w - 8, Math.random() * h - 4, 10 + Math.random() * 24, 4 + Math.random() * 8); } b.strokeStyle = 'rgba(0,0,0,.5)'; b.strokeRect(1, 1, w - 2, h - 2); }),
+    pilon: tkTexture(128, 256, (b, w, h) => { b.fillStyle = '#3a3d42'; b.fillRect(0, 0, w, h); b.fillStyle = 'rgba(255,255,255,.07)'; b.fillRect(10, 0, 14, h); stripes(b, w, 30, 18); stripes(b, w, h - 24, 18); }),
+    cage: tkTexture(128, 256, (b, w, h) => { b.fillStyle = '#4f5a66'; b.fillRect(0, 0, w, h); b.fillStyle = '#2b2e33'; b.fillRect(20, 60, w - 40, 90); b.fillStyle = '#9aa4ae'; b.beginPath(); b.arc(w / 2, 85, 22, 0, Math.PI * 2); b.arc(w / 2, 125, 22, 0, Math.PI * 2); b.fill(); stripes(b, w, h - 20, 16); }),
   };
+  T.rouleaux = T.convoyeur;
   const lights = [];
-  const COL = { four: '#3a302a', silo: '#9aa0a6', pilier: '#4a4e54', poche: '#3a3d42' };
+  const COL = { four: '#3a302a', silo: '#9aa0a6', pilier: '#4a4e54', poche: '#3a3d42', foyer: '#2b2522', enclume: '#24272b', cuve: '#1d2a33',
+    bobine: '#9aa4ae', tas: '#6b4a33', grue: '#F5B700', benne: '#2b6cb0', presse: '#3a5f3a' };
+  const METAL = ['silo', 'poche', 'pilier', 'enclume', 'bobine', 'grue', 'benne', 'presse', 'cuve'];
+  const ROUND = { four: 1, silo: 1, poche: 0.78, bobine: 1 };
+  const GLOW = { four: '#ffb347', poche: '#ffb347', foyer: '#ff6a1a' };
   const texMats = new Map();
   for (const o of MAP.obs) {
     const h = o.z;
-    const round = ['four', 'silo', 'poche'].includes(o.k);
     let mat;
     if (T[o.k]) {   // une matière par type et par répétition de motif, partagée entre obstacles semblables
-      const rx = Math.max(1, Math.round(Math.max(o.w, o.h) / (o.k === 'mur' ? 300 : 120))), ry = o.k === 'mur' ? Math.max(1, Math.round(h / 300)) : 1;
+      const big = o.k === 'mur' || o.k === 'cloture';
+      const rx = Math.max(1, Math.round(Math.max(o.w, o.h) / (big ? 300 : 120))), ry = big ? Math.max(1, Math.round(h / 300)) : 1;
       const key = o.k + rx + 'x' + ry;
       if (!texMats.has(key)) {
         const t = T[o.k].clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry);
-        texMats.set(key, new THREE.MeshStandardMaterial({ map: t, roughness: 0.8, metalness: o.k === 'conteneur' ? 0.3 : 0.05 }));
+        texMats.set(key, new THREE.MeshStandardMaterial({ map: t, roughness: 0.8, metalness: ['conteneur', 'pilon', 'cage', 'cube'].includes(o.k) ? 0.35 : 0.05 }));
       }
       mat = texMats.get(key);
-    } else mat = ryMat(COL[o.k] || '#555', { metalness: ['silo', 'poche', 'pilier'].includes(o.k) ? 0.6 : 0.1, roughness: o.k === 'silo' ? 0.35 : 0.8 });
-    const geo = round ? new THREE.CylinderGeometry(Math.min(o.w, o.h) / 2, Math.min(o.w, o.h) / 2 * (o.k === 'poche' ? 0.78 : 1), h, 24) : new THREE.BoxGeometry(o.w, h, o.h);
+    } else mat = ryMat(COL[o.k] || '#555', { metalness: METAL.includes(o.k) ? 0.6 : 0.1, roughness: ['silo', 'bobine'].includes(o.k) ? 0.35 : 0.8 });
+    const r = Math.min(o.w, o.h) / 2;
+    const geo = o.k === 'tas' ? new THREE.ConeGeometry(r * 1.1, h, 9) : ROUND[o.k] ? new THREE.CylinderGeometry(r, r * ROUND[o.k], h, 24) : new THREE.BoxGeometry(o.w, h, o.h);
     const m = new THREE.Mesh(geo, mat);
     m.position.set(o.x + o.w / 2, h / 2, o.y + o.h / 2);
+    if (o.k === 'tas') m.rotation.y = (o.x * 7 + o.y) % 3;
     scene.add(m);
-    if (o.k === 'four' || o.k === 'poche') {
-      const top = new THREE.Mesh(new THREE.CircleGeometry(Math.min(o.w, o.h) * 0.38, 20), new THREE.MeshBasicMaterial({ color: '#ffb347' }));
+    if (GLOW[o.k]) {
+      const top = new THREE.Mesh(new THREE.CircleGeometry(Math.min(o.w, o.h) * 0.38, 20), new THREE.MeshBasicMaterial({ color: GLOW[o.k] }));
       top.rotation.x = -Math.PI / 2; top.position.set(o.x + o.w / 2, h + 1, o.y + o.h / 2); scene.add(top);
     }
-    if (o.k === 'four') {
-      const door = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), new THREE.MeshBasicMaterial({ color: '#ff8a2a' })); door.position.set(o.x + o.w / 2, 40, o.y + o.h + 0.5); scene.add(door);
-      if (lights.length < 5) { const pl = new THREE.PointLight('#ff7a2a', 1.6, 900, 1.5); pl.position.set(o.x + o.w / 2, h + 80, o.y + o.h / 2); scene.add(pl); lights.push(pl); }
+    if (o.k === 'cuve') {
+      const oil = new THREE.Mesh(new THREE.PlaneGeometry(o.w - 12, o.h - 12), ryMat('#0d1418', { metalness: 0.9, roughness: 0.1 }));
+      oil.rotation.x = -Math.PI / 2; oil.position.set(o.x + o.w / 2, h + 0.5, o.y + o.h / 2); scene.add(oil);
+    }
+    if (o.k === 'grue') {   // flèche de la grue
+      const jib = new THREE.Mesh(new THREE.BoxGeometry(900, 40, 40), ryMat('#F5B700', { metalness: 0.5 })); jib.position.set(o.x + o.w / 2 + 300, h - 30, o.y + o.h / 2); scene.add(jib);
+    }
+    if ((o.k === 'four' || o.k === 'foyer') && lights.length < 6) {
+      if (o.k === 'four') { const door = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), new THREE.MeshBasicMaterial({ color: '#ff8a2a' })); door.position.set(o.x + o.w / 2, 40, o.y + o.h + 0.5); scene.add(door); }
+      const pl = new THREE.PointLight('#ff7a2a', 1.6, 900, 1.5); pl.position.set(o.x + o.w / 2, h + 80, o.y + o.h / 2); scene.add(pl); lights.push(pl);
     }
   }
   // la fonte : sol de métal en fusion hors de la zone + mur de chaleur
@@ -557,44 +548,37 @@ function startRoyaleClient() {
     }
   };
   const flash = new THREE.PointLight('#ffc070', 0, 380, 2); scene.add(flash);
-  // matériaux de construction : planches, briques réfractaires, tôle d'acier (3 niveaux d'usure)
-  const BTEX = {
-    bois: tkTexture(128, 128, g2 => { g2.fillStyle = '#a07a4c'; g2.fillRect(0, 0, 128, 128); for (let y = 0; y < 128; y += 32) { g2.fillStyle = 'rgba(0,0,0,.35)'; g2.fillRect(0, y, 128, 3); g2.fillStyle = 'rgba(255,230,190,.12)'; g2.fillRect(0, y + 3, 128, 4); } for (let i = 0; i < 40; i++) { g2.strokeStyle = 'rgba(70,40,15,.25)'; g2.beginPath(); const y = Math.random() * 128; g2.moveTo(0, y); g2.bezierCurveTo(40, y + 4, 80, y - 4, 128, y); g2.stroke(); } g2.fillStyle = '#3a3d42'; [[10, 14], [118, 14], [10, 114], [118, 114]].forEach(([x, y]) => g2.fillRect(x - 2, y - 2, 5, 5)); }),
-    brique: tkTexture(128, 128, g2 => { g2.fillStyle = '#d8c8b0'; g2.fillRect(0, 0, 128, 128); for (let y = 0; y < 128; y += 21) for (let x = (y / 21 % 2) * 21 - 21; x < 128; x += 42) { g2.fillStyle = `hsl(${8 + Math.random() * 8},${45 + Math.random() * 15}%,${36 + Math.random() * 10}%)`; g2.fillRect(x + 2, y + 2, 38, 17); } }),
-    acier: tkTexture(128, 128, g2 => { g2.fillStyle = '#7d868f'; g2.fillRect(0, 0, 128, 128); for (let x = 0; x < 128; x += 16) { g2.fillStyle = 'rgba(255,255,255,.18)'; g2.fillRect(x, 0, 5, 128); g2.fillStyle = 'rgba(0,0,0,.2)'; g2.fillRect(x + 8, 0, 4, 128); } g2.fillStyle = '#F5B700'; g2.fillRect(0, 118, 128, 10); g2.fillStyle = '#1a1a1a'; for (let x = 0; x < 128; x += 20) { g2.beginPath(); g2.moveTo(x, 128); g2.lineTo(x + 10, 118); g2.lineTo(x + 18, 118); g2.lineTo(x + 8, 128); g2.fill(); } }),
+  // coffres de l'atelier : caisse rouge à couvercle qui s'ouvre, lueur dorée tant qu'elle est fermée
+  const chestBody = tkTexture(128, 64, (b, w, h) => { b.fillStyle = '#9e2430'; b.fillRect(0, 0, w, h); b.fillStyle = '#4a4e54'; b.fillRect(0, 0, w, 6); b.fillRect(0, h - 6, w, 6); b.fillRect(10, 0, 8, h); b.fillRect(w - 18, 0, 8, h); b.fillStyle = '#F5B700'; b.fillRect(w / 2 - 8, 6, 16, 14); });
+  const chestMat = new THREE.MeshStandardMaterial({ map: chestBody, roughness: 0.5, metalness: 0.3 });
+  const chestLidMat = ryMat('#7a1c26', { metalness: 0.3, roughness: 0.5 });
+  const chests = new Map();
+  const chestGlowGeo = new THREE.CylinderGeometry(3, 3, 1, 6, 1, true);
+  const syncChests = list => {
+    for (const c of list) {
+      let ch = chests.get(c[0]);
+      if (!ch) {
+        const grp = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(56, 30, 34), chestMat); body.position.y = 15; grp.add(body);
+        const hinge = new THREE.Group(); hinge.position.set(0, 30, -17); grp.add(hinge);
+        const lid = new THREE.Mesh(new THREE.BoxGeometry(58, 8, 36), chestLidMat); lid.position.set(0, 4, 17); hinge.add(lid);
+        const glow = new THREE.Mesh(chestGlowGeo, new THREE.MeshBasicMaterial({ color: '#F5B700', transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+        glow.scale.y = 90; glow.position.y = 45; grp.add(glow);
+        grp.position.set(c[1], c[3], c[2]); grp.rotation.y = Math.PI / 2 - c[4];
+        scene.add(grp);
+        ch = { grp, hinge, glow, open: false, t: 0 };
+        chests.set(c[0], ch);
+      }
+      if (c[5] && !ch.open) { ch.open = true; ch.t = 0; }
+    }
   };
-  const bMats = {};
-  const bMat = (m, wear) => bMats[m + wear] || (bMats[m + wear] = (() => { const mt = new THREE.MeshStandardMaterial({ map: BTEX[m], roughness: m === 'acier' ? 0.4 : 0.85, metalness: m === 'acier' ? 0.6 : 0.05 }); mt.color.setScalar(1 - wear * 0.28); return mt; })());
-  const RAMP_LEN = Math.hypot(TILE, LEVEL), RAMP_ANG = Math.atan2(LEVEL, TILE);
-  const geoWall = new THREE.BoxGeometry(TILE, LEVEL, 10), geoFloor = new THREE.BoxGeometry(TILE, 8, TILE), geoRamp = new THREE.BoxGeometry(TILE, 8, RAMP_LEN);
-  // place un objet (mur, plancher ou rampe) selon sa tuile, son étage et son orientation
-  const placePiece = (obj, b) => {
-    const cx = (b.gx + 0.5) * TILE, cz = (b.gy + 0.5) * TILE, base = b.lv * LEVEL;
-    obj.rotation.set(0, 0, 0);
-    if (b.t === 'mur') {
-      const d = b.d % 4;
-      if (d === 0) obj.position.set((b.gx + 1) * TILE, base + LEVEL / 2, cz); else if (d === 2) obj.position.set(b.gx * TILE, base + LEVEL / 2, cz);
-      else if (d === 1) obj.position.set(cx, base + LEVEL / 2, (b.gy + 1) * TILE); else obj.position.set(cx, base + LEVEL / 2, b.gy * TILE);
-      obj.rotation.y = d % 2 === 0 ? Math.PI / 2 : 0;
-    } else if (b.t === 'sol') obj.position.set(cx, base - 4, cz);
-    else { obj.position.set(cx, base + LEVEL / 2, cz); obj.rotation.y = [-Math.PI / 2, Math.PI, Math.PI / 2, 0][b.d]; }
-  };
-  const mkPiece = (t, mat) => {
-    if (t !== 'rampe') return new THREE.Mesh(t === 'mur' ? geoWall : geoFloor, mat);
-    const g2 = new THREE.Group(); const m = new THREE.Mesh(geoRamp, mat); m.rotation.x = RAMP_ANG; g2.add(m); g2.userData.mesh = m; return g2;
-  };
-  const bMeshes = new Map();
-  const setPieceMat = (obj, mat) => { if (obj.isMesh) obj.material = mat; else obj.userData.mesh.material = mat; };
-  const ghosts = { mur: mkPiece('mur'), rampe: mkPiece('rampe'), sol: mkPiece('sol') };
-  const ghostOk = new THREE.MeshBasicMaterial({ color: '#5AA8FF', transparent: true, opacity: 0.38, depthWrite: false });
-  const ghostNo = new THREE.MeshBasicMaterial({ color: '#ff5a5a', transparent: true, opacity: 0.3, depthWrite: false });
-  Object.values(ghosts).forEach(gh => { setPieceMat(gh, ghostOk); gh.visible = false; scene.add(gh); });
   // pont roulant jaune qui traverse la halle au début de la partie
   const crane = new THREE.Group();
   const craneTex = tkTexture(256, 32, g2 => { g2.fillStyle = '#F5B700'; g2.fillRect(0, 0, 256, 32); g2.fillStyle = '#1a1a1a'; for (let x = -32; x < 256; x += 32) { g2.beginPath(); g2.moveTo(x, 32); g2.lineTo(x + 16, 0); g2.lineTo(x + 28, 0); g2.lineTo(x + 12, 32); g2.fill(); } }, [8, 1]);
   const beam = new THREE.Mesh(new THREE.BoxGeometry(70, 34, MAP.h), new THREE.MeshStandardMaterial({ map: craneTex, metalness: 0.4, roughness: 0.5 }));
-  beam.position.y = BT.busZ + 140; crane.add(beam);
-  [80, MAP.h - 80].forEach(zz => { const tr = new THREE.Mesh(new THREE.BoxGeometry(110, 50, 80), ryMat('#3a3d42', { metalness: 0.6 })); tr.position.set(0, BT.busZ + 150, zz - MAP.h / 2); crane.add(tr); });
+  const BUSZ = MAP.busZ || 560;
+  beam.position.y = BUSZ + 140; crane.add(beam);
+  [80, MAP.h - 80].forEach(zz => { const tr = new THREE.Mesh(new THREE.BoxGeometry(110, 50, 80), ryMat('#3a3d42', { metalness: 0.6 })); tr.position.set(0, BUSZ + 150, zz - MAP.h / 2); crane.add(tr); });
   crane.position.z = MAP.h / 2;
   scene.add(crane);
   let flashT = 0;
@@ -659,20 +643,7 @@ function startRoyaleClient() {
   function push(v) {
     prev = cur || v; prevAt = curAt || performance.now(); cur = v; curAt = performance.now();
     if (v.loot) { loot = v.loot; syncLoot(); }
-    const unpack = a => ({ id: a[0], t: a[1], gx: a[2], gy: a[3], lv: a[4], d: a[5], m: a[6], hp: a[7] });
-    const upsert = a => {
-      const b = unpack(a), old = builds.get(b.id);
-      if (old) { old.hp = b.hp; } else { builds.set(b.id, b); bIndex(b, true); }
-      const nb = builds.get(b.id);
-      const wear = nb.hp > (BT.hp ? BT.hp[nb.m] : 100) * 0.66 ? 0 : nb.hp > (BT.hp ? BT.hp[nb.m] : 100) * 0.33 ? 1 : 2;
-      let mesh = bMeshes.get(b.id);
-      if (!mesh) { mesh = mkPiece(nb.t, bMat(nb.m, wear)); placePiece(mesh, nb); mesh.scale.setScalar(0.05); mesh.userData.grow = 0; scene.add(mesh); bMeshes.set(b.id, mesh); }
-      else setPieceMat(mesh, bMat(nb.m, wear));
-    };
-    const drop = id => { const b = builds.get(id); if (b) { bIndex(b, false); builds.delete(id); } const m = bMeshes.get(id); if (m) { scene.remove(m); bMeshes.delete(id); } };
-    if (v.B) { const ids = new Set(v.B.map(a => a[0])); [...builds.keys()].forEach(id => { if (!ids.has(id)) drop(id); }); v.B.forEach(upsert); }
-    if (v.bc) v.bc.forEach(upsert);
-    if (v.br) v.br.forEach(drop);
+    if (v.ch) { chestList = v.ch; syncChests(v.ch); }
     const sp = v.p[mySeat];
     if (sp && sp.tp !== me.tp) {   // recalage par le serveur (départ, déplacement refusé)
       Object.assign(me, { x: sp.x, y: sp.y, z: sp.z, vx: 0, vy: 0, vz: 0, tp: sp.tp, gl: !!sp.gl, gd: !sp.gl });
@@ -715,15 +686,11 @@ function startRoyaleClient() {
         toast(`${RY_WEAPONS[e.w]} ${RY_RARITY[e.r].name}`); sfx(980, 0.1, 'triangle', 0.05);
       } else if (e.k === 'zone') {
         banner = 'LA FONTE AVANCE !'; bannerAt = performance.now(); sfx(90, 0.9, 'sawtooth', 0.05, 30);
-      } else if (e.k === 'harvest') {
-        burst(e.x, e.y, e.z, 8, MAT_COL[e.m], 220, 0.35);
-        if (mine) { floats.push({ x: e.x, y: e.y, z: e.z + 20, txt: `+${e.n} ${e.m}`, life: 0.9, c: MAT_COL[e.m] }); sfx(e.m === 'acier' ? 1400 : e.m === 'brique' ? 500 : 300, 0.06, 'triangle', 0.04); }
-      } else if (e.k === 'build') {
-        if (mine) sfx(640, 0.06, 'square', 0.03, 200); else if (Math.hypot(e.x - me.x, e.y - me.y) < 900) sfx(520, 0.04, 'square', 0.015);
-      } else if (e.k === 'bhit') {
-        burst(e.x, e.y, e.z, 6, MAT_COL[e.m], 180, 0.3);
-      } else if (e.k === 'bbreak') {
-        burst(e.x, e.y, e.z, 40, MAT_COL[e.m], 340, 0.7, 60); sfx(110, 0.25, 'sawtooth', 0.04, -40);
+      } else if (e.k === 'chest') {
+        burst(e.x, e.y, e.z + 30, 30, '#F5B700', 260, 0.7, 160);
+        if (mine || Math.hypot(e.x - me.x, e.y - me.y) < 600) { sfx(330, 0.12, 'triangle', 0.05, 200); setTimeout(() => sfx(990, 0.25, 'triangle', 0.05, 400), 120); }
+      } else if (e.k === 'throw') {
+        if (mine) sfx(240, 0.08, 'triangle', 0.04, -100);
       } else if (e.k === 'drop') {
         if (mine) { sfx(300, 0.5, 'sine', 0.05, -200); toast('Largage ! Dirige ta descente avec ZQSD'); }
       } else if (e.k === 'win') {
@@ -814,7 +781,10 @@ function startRoyaleClient() {
     g.fillStyle = 'rgba(255,106,26,.35)'; g.beginPath(); g.rect(mx, my, mw, mh); g.arc(mx + z.x * k, my + z.y * k, z.r * k, 0, Math.PI * 2, true); g.fill('evenodd');
     g.strokeStyle = '#ff8a2a'; g.lineWidth = 2; g.beginPath(); g.arc(mx + z.x * k, my + z.y * k, z.r * k, 0, Math.PI * 2); g.stroke();
     if (z.to) { g.strokeStyle = 'rgba(255,255,255,.7)'; g.setLineDash([3, 3]); g.beginPath(); g.arc(mx + z.to[0] * k, my + z.to[1] * k, z.to[2] * k, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
-    if (sp && sp.m === 'metallurgiste') for (const it of loot) if (it[5] >= 2) { g.fillStyle = RY_RARITY[it[5]].color; g.fillRect(mx + it[1] * k - 1.5, my + it[2] * k - 1.5, 3, 3); }
+    if (sp && sp.m === 'metallurgiste') {
+      for (const it of loot) if (it[5] >= 2) { g.fillStyle = RY_RARITY[it[5]].color; g.fillRect(mx + it[1] * k - 1.5, my + it[2] * k - 1.5, 3, 3); }
+      g.fillStyle = '#F5B700'; for (const c of chestList) if (!c[5]) g.fillRect(mx + c[1] * k - 1, my + c[2] * k - 1, 2, 2);
+    }
     const fx = mx + f.x * k, fy = my + f.y * k, fa = fi === mySeat ? me.yaw : f.a;
     g.fillStyle = 'rgba(127,212,255,.25)'; g.beginPath(); g.moveTo(fx, fy); g.arc(fx, fy, 26, fa - 0.6, fa + 0.6); g.closePath(); g.fill();
     g.restore();
@@ -848,14 +818,20 @@ function startRoyaleClient() {
         g.font = '700 11px Archivo, sans-serif'; g.textAlign = 'left'; g.fillStyle = s ? '#fff' : '#888';
         g.fillText(s ? `${sl + 1}. ${RY_WEAPONS[s.w]} · ${RY_RARITY[s.r].name}` : `${sl + 1}. mains nues`, x + 9, y + 13);
       });
-      const near = loot.find(it => (it[1] - me.x) ** 2 + (it[2] - me.y) ** 2 < 50 ** 2 && Math.abs(it[3] - me.z) < 60);
-      if (near && sp.s[0] && sp.s[1]) {
-        g.font = '400 9px "Press Start 2P", monospace'; g.textAlign = 'center'; g.fillStyle = RY_RARITY[near[5]].color;
-        g.fillText(`E : PRENDRE ${RY_WEAPONS[near[4]].toUpperCase()} ${RY_RARITY[near[5]].name.toUpperCase()}`, W / 2, by - 22);
-      }
-      if (!sp.s[0] && !sp.s[1] && cur.time < 40 && !build && !sp.bu && !sp.gl) {
+      // ce qu'il y a à portée : une arme à ramasser, sinon un coffre à ouvrir
+      const RCH = trackInfo.reach || { item: 55, chest: 80 };
+      const near = loot.filter(it => (it[1] - me.x) ** 2 + (it[2] - me.y) ** 2 < RCH.item ** 2 && Math.abs(it[3] - me.z) < 70)
+        .sort((a, b) => ((a[1] - me.x) ** 2 + (a[2] - me.y) ** 2) - ((b[1] - me.x) ** 2 + (b[2] - me.y) ** 2))[0];
+      const box = !near && chestList.find(c => !c[5] && (c[1] - me.x) ** 2 + (c[2] - me.y) ** 2 < RCH.chest ** 2 && Math.abs(c[3] - me.z) < 70);
+      g.font = '400 9px "Press Start 2P", monospace'; g.textAlign = 'center';
+      if (near) {
+        g.fillStyle = RY_RARITY[near[5]].color;
+        g.fillText(`E : ${sp.s[0] && sp.s[1] ? 'ÉCHANGER CONTRE' : 'PRENDRE'} ${RY_WEAPONS[near[4]].toUpperCase()} ${RY_RARITY[near[5]].name.toUpperCase()}`, W / 2, by - 22);
+      } else if (box) { g.fillStyle = '#F5B700'; g.fillText('E : OUVRIR LE COFFRE', W / 2, by - 22); }
+      else if (sp.s[sp.c]) { g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('G : LÂCHER L\'ARME', W / 2, by - 22); }
+      if (!sp.s[0] && !sp.s[1] && cur.time < 40 && !sp.bu && !sp.gl && !near && !box) {
         g.font = '400 9px "Press Start 2P", monospace'; g.textAlign = 'center'; g.fillStyle = '#ffd27a';
-        g.fillText('À MAINS NUES : TROUVE UNE ARME (FAISCEAUX DE COULEUR)', W / 2, by - 22);
+        g.fillText('À MAINS NUES : OUVRE LES COFFRES (LUEUR DORÉE)', W / 2, by - 22);
       }
     } else if (sp) {
       g.font = '400 11px "Press Start 2P", monospace'; g.textAlign = 'center'; g.fillStyle = '#ff8a8a';
@@ -863,27 +839,8 @@ function startRoyaleClient() {
     }
     g.font = '400 8px "Press Start 2P", monospace'; g.textAlign = 'left'; g.fillStyle = '#9aa0a6';
     g.fillText(`${mode === 'fps' ? '1RE' : '3E'} PERSONNE (V)`, 14, my + mh + 16);
-    // matériaux récoltés
-    if (sp && sp.al && sp.mt) {
-      const bx0 = W - 128, by0 = H - 104;
-      g.fillStyle = 'rgba(8,9,11,.75)'; g.fillRect(bx0 - 8, by0 - 8, 124, 84);
-      BT.mats.forEach((m, k) => {
-        const y = by0 + k * 24, on = build && k === matSel;
-        g.fillStyle = on ? 'rgba(255,255,255,.16)' : 'transparent'; g.fillRect(bx0 - 4, y - 2, 116, 22);
-        g.fillStyle = MAT_COL[m]; g.fillRect(bx0, y + 2, 14, 14);
-        g.font = '800 12px Archivo, sans-serif'; g.textAlign = 'left'; g.fillStyle = sp.mt[k] >= BT.cost ? '#fff' : '#888';
-        g.fillText(m.toUpperCase(), bx0 + 20, y + 14); g.textAlign = 'right'; g.fillText(String(sp.mt[k]), bx0 + 106, y + 14);
-      });
-    }
-    if (build && sp && sp.al) {
-      g.font = '400 9px "Press Start 2P", monospace'; g.textAlign = 'center';
-      const txt = ['mur', 'rampe', 'sol'].map((k, i) => `${k === build ? '▶' : ''}${PIECES[k]} ${i + 3}`).join('   ');
-      g.fillStyle = 'rgba(8,9,11,.8)'; g.fillRect(W / 2 - 250, H - 140, 500, 30);
-      g.fillStyle = '#7fd4ff'; g.fillText(`CONSTRUCTION · ${txt}`, W / 2, H - 128);
-      g.fillStyle = '#c6cad0'; g.fillText('CLIC POSER · X MATÉRIAU · 1/2 ARMES', W / 2, H - 115);
-    }
     if (sp && sp.al && sp.bu) {
-      const left = Math.max(0, Math.ceil((BT.busTime || 16) - (cur.time || 0)));
+      const left = Math.max(0, Math.ceil((trackInfo.busTime || 16) - (cur.time || 0)));
       bigText(g, 'ESPACE : SAUTE !', W / 2, H / 2 + 70, 34, '#F5B700');
       g.font = '400 9px "Press Start 2P", monospace'; g.textAlign = 'center'; g.fillStyle = '#fff';
       g.fillText(cur.phase === 'count' ? 'LE PONT ROULANT VA TRAVERSER LA HALLE' : `LARGAGE AUTOMATIQUE DANS ${left} S`, W / 2, H / 2 + 100);
@@ -927,33 +884,14 @@ function startRoyaleClient() {
     }
     jumpQueued = false;
     sendInput(false);
-    // construction : pièce visée et pose (maintenir le clic pour enchaîner)
-    let ghostSpec = null;
-    Object.values(ghosts).forEach(gh => { gh.visible = false; });
-    if (build && alive && !sp.bu && cur.phase === 'play') {
-      const di = ((Math.round(me.yaw / (Math.PI / 2)) % 4) + 4) % 4;
-      const ahead = [me.x + Math.cos(me.yaw) * TILE * 0.8, me.y + Math.sin(me.yaw) * TILE * 0.8];
-      const lvFeet = Math.max(0, Math.floor((me.z + 30) / LEVEL));
-      if (build === 'mur') ghostSpec = { t: 'mur', gx: Math.floor(me.x / TILE), gy: Math.floor(me.y / TILE), lv: lvFeet, d: di };
-      else if (build === 'rampe') ghostSpec = { t: 'rampe', gx: Math.floor(ahead[0] / TILE), gy: Math.floor(ahead[1] / TILE), lv: lvFeet, d: di };
-      else ghostSpec = { t: 'sol', gx: Math.floor(ahead[0] / TILE), gy: Math.floor(ahead[1] / TILE), lv: me.pitch > 0.35 ? lvFeet + 1 : Math.max(0, Math.round(me.z / LEVEL)), d: 0 };
-      const mt = sp.mt || [0, 0, 0];
-      let mi = matSel;
-      if (mt[mi] < BT.cost) { const alt = [0, 1, 2].find(k => mt[k] >= BT.cost); if (alt !== undefined) mi = alt; }
-      ghostSpec.m = BT.mats[mi]; ghostSpec.ok = mt[mi] >= BT.cost;
-      const gh = ghosts[build];
-      placePiece(gh, ghostSpec); setPieceMat(gh, ghostSpec.ok ? ghostOk : ghostNo); gh.visible = true;
-      const nowMs = performance.now();
-      if (placeHeld && ghostSpec.ok && nowMs - lastPlace > 140) {
-        lastPlace = nowMs;
-        send({ t: 'act', a: 'build', piece: ghostSpec.t, gx: ghostSpec.gx, gy: ghostSpec.gy, lv: ghostSpec.lv, d: ghostSpec.d, m: ghostSpec.m });
-      }
-    }
     // pont roulant
     crane.position.x = cur.crane || 200;
     crane.visible = cur.p.some(q => q.bu) || cur.phase === 'count';
-    // constructions qui sortent de terre
-    for (const m of bMeshes.values()) if (m.userData.grow !== undefined) { m.userData.grow = Math.min(1, m.userData.grow + dt * 6); m.scale.setScalar(Math.max(0.05, m.userData.grow)); if (m.userData.grow >= 1) delete m.userData.grow; }
+    // coffres : le couvercle bascule à l'ouverture, la lueur s'éteint
+    for (const ch of chests.values()) {
+      if (ch.open && ch.t < 1) { ch.t = Math.min(1, ch.t + dt * 3); ch.hinge.rotation.x = -1.9 * (1 - (1 - ch.t) ** 3); ch.glow.material.opacity = 0.35 * (1 - ch.t); }
+      else if (!ch.open) ch.glow.material.opacity = 0.25 + Math.sin(t * 3 + ch.grp.position.x) * 0.1;
+    }
     if (shake > 0) shake -= dt;
     recoil = Math.max(0, recoil - dt * 4); landKick = Math.max(0, landKick - dt * 4); swingVm = Math.max(0, swingVm - dt);
     const ps = interp();
@@ -1051,7 +989,7 @@ function startRoyaleClient() {
     renderer.clear();
     renderer.render(scene, cam);
     // arme à la 1re personne
-    if (firstPerson && !build && !me.gl) {
+    if (firstPerson && !me.gl) {
       const s = sp.s[sp.c], key = (s ? s.w + s.r : 'poings') + sp.m;
       if (key !== vmKey) { vmKey = key; buildVm(s ? s.w : 'poings', s ? s.r : 0, sp.m); }
       const hs = Math.hypot(me.vx, me.vy) / 240;

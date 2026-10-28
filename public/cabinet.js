@@ -71,10 +71,12 @@ function renderPreview() {
       <p>${esc(it.pitch)}</p>
       <div class="pv-meta">${ruleFor(it)}${best ? `<span class="rec">Record : ${best}${it.id === 'quiz' ? '/10' : it.id === 'usine' ? ' k€ créés' : ''}</span>` : ''}</div>
       <div class="pv-go"><button class="btn btn-hot" id="pvGo">${it.kind === 'panel' ? 'Ouvrir' : 'Jouer'} ▶</button>
-      ${it.kind !== 'panel' ? '<button class="btn btn-ghost" id="pvScores">Classement</button>' : ''}</div>
+      ${it.kind !== 'panel' ? '<button class="btn btn-ghost" id="pvScores">Classement</button>' : ''}
+      ${it.id === 'fighter' || it.id === 'tekken' ? '<button class="btn btn-ghost" id="pvCombos">📖 Combos et ultimes</button>' : ''}</div>
     </div>`;
   $('#pvGo').addEventListener('click', () => launch(it));
   const sc = $('#pvScores'); if (sc) sc.addEventListener('click', () => openPanel('scores', it.id));
+  const cb = $('#pvCombos'); if (cb) cb.addEventListener('click', () => openComboGuide(it.id));
   previewStop = paintArt($('#pvArt'), it);
 }
 

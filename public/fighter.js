@@ -26,6 +26,7 @@ const dirDown = (a, l) => [Math.sin(a) * l, Math.cos(a) * l];   // angle compté
 
 /* Pose d'un combattant selon son état serveur (repère local : x vers l'avant, y vers le bas) */
 function fighterPose(f, t) {
+  if (f.mv === 'ultime' && typeof ultAnim === 'function') f = { ...f, mv: ultAnim(f.ch) };   // ruée de l'ultime : geste du spécial
   const P = { lean: 0.12, head: 0, sF: 0.5, eF: 2.3, sB: 0.2, eB: 2.4, hF: 0.32, kF: -0.35, hB: -0.28, kB: -0.3, rot: 0, lift: 0, tool: null, toolT: 0 };
   const breathe = Math.sin(t * 3.2) * 0.04;
   P.eF += breathe; P.eB -= breathe; P.lean += breathe * 0.5;
@@ -270,12 +271,12 @@ function startFighterClient() {
   const pad = document.createElement('div');
   pad.className = 'touch-pad';
   pad.innerHTML = `<div class="grp"><button data-m="1">◀</button><button data-m="4">▲</button><button data-m="8">▼</button><button data-m="2">▶</button></div>
-    <div class="grp"><button data-m="16" class="warm">POING</button><button data-m="32" class="hot">PIED</button><button data-m="64">SPÉ</button></div>`;
+    <div class="grp"><button data-m="16" class="warm">POING</button><button data-m="32" class="hot">PIED</button><button data-m="64">SPÉ</button><button data-m="128" class="hot">ULTI</button></div>`;
   const { c, g } = makeCanvas(wrap, W, H);
   wrap.appendChild(pad);
   const hint = document.createElement('p');
   hint.className = 'keys-hint';
-  hint.textContent = '← → BOUGER · ↑ SAUTER · ↓ ACCROUPI · J POING · K PIED · L SPÉCIAL · RECULER = GARDE';
+  hint.textContent = '← → BOUGER · ↑ SAUTER · ↓ ACCROUPI · J POING · K PIED · L SPÉCIAL · I ULTIME (JAUGE PLEINE) · RECULER = GARDE';
   wrap.appendChild(hint);
   const unGuide = comboGuideButton(wrap, 'fighter');
 
@@ -324,7 +325,7 @@ function startFighterClient() {
   let mask = 0, sent = -1, lastSend = 0;
   const KEYMAP = {
     ArrowLeft: 1, KeyA: 1, KeyQ: 1, ArrowRight: 2, KeyD: 2, ArrowUp: 4, KeyW: 4, KeyZ: 4, ArrowDown: 8, KeyS: 8,
-    KeyJ: 16, Space: 16, KeyX: 16, KeyK: 32, KeyC: 32, KeyL: 64, KeyV: 64,
+    KeyJ: 16, Space: 16, KeyX: 16, KeyK: 32, KeyC: 32, KeyL: 64, KeyV: 64, KeyI: 128,
   };
   const pushInput = force => {
     const now = performance.now();
@@ -370,6 +371,12 @@ function startFighterClient() {
         shake = 0.2; sfx(90, 0.3, 'sawtooth', 0.06);
       } else if (e.k === 'ko') {
         shake = 0.5; sfx(60, 0.6, 'sawtooth', 0.08, -20);
+      } else if (e.k === 'ult') {
+        ultCutIn(wrap, e.ch, e.seat === mySeat);
+      } else if (e.k === 'ulthit') {
+        ultScene(wrap, e.ch, e.foe, e.dmg, e.seat === mySeat);
+      } else if (e.k === 'ultmiss') {
+        ultMiss(wrap);
       } else if (e.k === 'combo') {
         const f = v.f[e.seat];
         comboFx(wrap, e.name, e.n, (FIGHTERS[f.ch] || FIGHTERS.fondeur).color, e.seat === mySeat);
@@ -480,7 +487,10 @@ function startFighterClient() {
       g.fillStyle = mg; g.fillRect(left ? mx : mx + 220 - 2.2 * f.m, my, 2.2 * f.m, 12);
       g.fillStyle = 'rgba(0,0,0,.6)'; [35, 70].forEach(v => g.fillRect(left ? mx + 2.2 * v : mx + 220 - 2.2 * v, my, 2, 12));
       g.font = `400 8px "Press Start 2P", monospace`; g.fillStyle = f.m >= 35 ? '#F5B700' : '#9aa0a6'; g.textAlign = left ? 'left' : 'right';
-      g.fillText(f.m >= 35 ? 'CHALEUR · SPÉCIAL PRÊT' : 'CHALEUR', left ? mx : mx + 220, my - 6);
+      const full = f.m >= 100;
+      g.fillStyle = full ? (Math.sin(performance.now() / 90) > 0 ? '#fff3c0' : '#F5B700') : f.m >= 35 ? '#F5B700' : '#9aa0a6';
+      g.fillText(full ? `ÉNERGIE PLEINE · ULTIME ${i === mySeat ? '(I)' : ''}` : f.m >= 35 ? 'ÉNERGIE · SPÉCIAL PRÊT' : 'ÉNERGIE', left ? mx : mx + 220, my - 6);
+      if (full) { g.strokeStyle = `rgba(255,224,122,${0.5 + Math.sin(performance.now() / 90) * 0.4})`; g.lineWidth = 3; g.strokeRect(mx - 3, my - 3, 226, 18); }
       if (f.cb >= 2) { g.font = `900 ${30 + f.cb * 2}px ${DISPLAY}`; g.fillStyle = '#F5B700'; g.fillText(`${f.cb} COUPS !`, left ? 30 : W - 30, 150); }
     });
     g.fillStyle = '#000'; g.fillRect(W / 2 - 40, 12, 80, 50);

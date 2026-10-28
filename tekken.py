@@ -19,7 +19,9 @@ MIN_DIST = 62
 STAND_H, CROUCH_H = 185, 105
 
 # touches : B/F = reculer/avancer (le client met toujours son joueur à gauche), U/D, boutons 1 à 4
-B, F, U, D, B1, B2, B3, B4 = 1, 2, 4, 8, 16, 32, 64, 128
+B, F, U, D, B1, B2, B3, B4, ULT = 1, 2, 4, 8, 16, 32, 64, 128, 256
+CINE = 132                   # images de la cinématique d'une attaque ultime réussie (4,4 s)
+ULT_DMG = 42
 BUTTONS = B1 | B2 | B3 | B4
 
 CHARS = {
@@ -57,6 +59,8 @@ MOVES = {
     'meuleuse': mv(5, 12, 14, 5, 95, 'mid', hs=10, bs=6, push=3, anim='meuleuse', limb='R', dash=13, multi=4),
     'laminage': mv(6, 2, 20, 38, 80, 'throw', anim='coulee', limb='R', nobreak=True),
     'rivet':    mv(7, 9, 14, 6, 125, 'mid', hs=10, bs=6, push=4, anim='kick', limb='R', multi=3),
+    # attaque ultime (jauge pleine) : ruée imparable ; si elle touche, la cinématique se lance
+    'ultime':   mv(9, 9, 22, 0, 140, 'mid', hs=0, bs=0, push=0, anim='coulee', limb='R', dash=12, ult=True, track=True),
 }
 FREE = ('idle', 'walk', 'crouch')
 SPECIALS = ('coulee', 'masse', 'sable', 'meuleuse', 'laminage', 'rivet')
@@ -73,6 +77,7 @@ class Fighter:
         self.name, self.bot, self.char = name, bot, char
         self.maxhp, self.speed, self.power = c['hp'], c['speed'], c['power']
         self.wins = 0
+        self.meter = 0.0
 
     def reset(self, x, z):
         self.x, self.z, self.y, self.vy = x, z, 0.0, 0.0
@@ -126,6 +131,7 @@ class Tournament:
         self.ai_mask, self.ai_t, self.ai_seen = [0, 0], [0, 0], [None, None]
         self.frame = 0
         self.round = 1
+        self.cine = None
         self.events: list[dict] = []
         self.eid = 0
         self.acc = 0.0
@@ -141,6 +147,19 @@ class Tournament:
         self.timer = ROUND_TIME * FPS
         final = all(f.wins == ROUNDS_TO_WIN - 1 for f in self.f)
         self.banner = 'MANCHE FINALE' if final else f'MANCHE {self.round}'
+
+    def end_cine(self):
+        a, d = self.f[self.cine['a']], self.f[self.cine['d']]
+        seat = self.cine['a']
+        self.cine = None
+        d.hp = max(0.0, d.hp - ULT_DMG * a.power)
+        d.state, d.vy, d.y, d.t = 'air', 18.0, 1.0, 0
+        d.vx, d.vz = a.dir[0] * 7, a.dir[1] * 7
+        a.state = 'idle'
+        a.combo = 0
+        self.event('ultend', d.x, 60, d.z, big=True, seat=seat)
+        if d.hp <= 0 and self.phase == 'fight':
+            self.end_round()
 
     def end_round(self):
         a, b = self.f
@@ -175,7 +194,7 @@ class Tournament:
         if data.get('a') != 'input' or seat > 1:
             return
         try:
-            m = int(data.get('k', 0)) & 255
+            m = int(data.get('k', 0)) & 511
         except (TypeError, ValueError):
             return
         self.press[seat] |= m & ~self.inputs[seat]
@@ -195,6 +214,12 @@ class Tournament:
         if self.phase == 'over':
             return
         self.frame += 1
+        if self.cine:      # cinématique d'ultime : tout est figé jusqu'au coup final
+            self.cine['t'] -= 1
+            self.press = [0, 0]
+            if self.cine['t'] <= 0:
+                self.end_cine()
+            return
         for i, f in enumerate(self.f):
             if f.bot or not connected(i):
                 self.ai(i)
@@ -321,6 +346,8 @@ class Tournament:
             if f.move == '1' and pr & B2 and f.frame >= 2:
                 f.start('12', self.frame)
                 return
+            if mvd.get('ult') and not f.hit_done and f.frame == mvd['s'] + mvd['a']:
+                self.event('ultmiss', f.x, 100, f.z, seat=i)
             if f.move == 'j3' and f.y <= 0 and f.frame > 2:
                 f.state = 'idle'
             elif f.frame >= mvd['s'] + mvd['a'] + mvd['r']:
@@ -374,6 +401,12 @@ class Tournament:
                 f.last_b = -99
                 return
             f.last_b = self.frame
+        if pr & ULT and f.meter >= 100:
+            f.meter = 0.0
+            f.buf, f.buf_at = 0, -1
+            f.start('ultime', self.frame)
+            self.event('ult', f.x, 100, f.z, seat=i, ch=f.char)
+            return
         # attaques (un appui attend une image pour laisser arriver un second bouton : projections 1+3 / 2+4)
         if pr & BUTTONS:
             f.buf |= pr & BUTTONS
@@ -468,6 +501,15 @@ class Tournament:
             d.vx = d.vz = 0.0
             self.event('grab', hx, 120, hz)
             return
+        if mvd.get('ult'):        # imparable : on lance la cinématique
+            if d.y > 40:
+                return
+            a.hit_done = True
+            self.cine = {'a': i, 'd': 1 - i, 't': CINE}
+            a.state, d.state = 'cine', 'cine'
+            a.vx = a.vz = d.vx = d.vz = 0.0
+            self.event('ulthit', d.x, 100, d.z, big=True, seat=i, ch=a.char, foe=d.char, dmg=ULT_DMG)
+            return
         if lvl == 'high' and d.crouch and d.y <= 0 and d.state != 'air':
             return  # le coup haut passe au-dessus d'un adversaire accroupi
         a.hit_done, a.last_hit = True, a.frame
@@ -475,12 +517,15 @@ class Tournament:
         hy = {'high': 150, 'mid': 105, 'low': 25}[lvl]
         if d.state != 'air' and self.blocking(d, lvl):
             d.state, d.t = 'blockstun', mvd['bs']
+            d.meter = min(100.0, d.meter + 3)
             d.vx, d.vz = a.dir[0] * mvd['push'] * 0.6, a.dir[1] * mvd['push'] * 0.6
             self.event('block', hx, hy, hz)
             return
         juggling = d.state == 'air'
         a.combo = a.combo + 1 if d.state in ('hit', 'air') else 1
         a.landed = True
+        a.meter = min(100.0, a.meter + 9)
+        d.meter = min(100.0, d.meter + 6)
         dmg = mvd['dmg'] * a.power * max(0.4, 1 - 0.1 * (a.combo - 1)) * (0.7 if juggling else 1)
         named = register(a, a.move, a.hits == 1, TEKKEN_SIG_MOVE.get(a.char, CHARS[a.char]['special']), TEKKEN_COMBOS, TEKKEN_SIGNATURES)
         if named:
@@ -531,6 +576,8 @@ class Tournament:
                 mask = (B1 if r < 0.18 else B2 if r < 0.3 else B3 if r < 0.42 else B4 if r < 0.5 else D | B3 if r < 0.6
                         else D | F | B2 if r < 0.68 else B1 | B3 if r < 0.74 else B | B2 if r < 0.8 else D if r < 0.88 else B)
             self.ai_t[i] = random.randint(5, 12)
+        if f.meter >= 100 and dist < 140 and f.state in FREE and random.random() < 0.05:
+            mask = ULT
         self.ai_mask[i] = mask
         self.press[i] |= mask & ~self.inputs[i]
         self.inputs[i] = mask
@@ -546,7 +593,7 @@ class Tournament:
             anim = None
             if f.state == 'attack':
                 m = f.mv
-                anim = m['anim']
+                anim = MOVES[CHARS[f.char]['special']]['anim'] if f.move == 'ultime' else m['anim']
                 if f.frame < m['s']:
                     ph, pp = 0, f.frame / m['s']
                 elif f.frame < m['s'] + m['a']:
@@ -556,6 +603,6 @@ class Tournament:
             out.append({'x': round(f.x, 1), 'z': round(f.z, 1), 'y': round(f.y, 1), 'dx': round(f.dir[0], 3), 'dz': round(f.dir[1], 3),
                         'st': f.state, 'mv': f.move, 'an': anim, 'lb': f.mv['limb'] if f.mv and f.state == 'attack' else 'L',
                         'ph': ph, 'pp': round(pp, 3), 'hp': round(f.hp, 1), 'max': f.maxhp, 'ch': f.char, 'n': f.name,
-                        'w': f.wins, 'cb': f.combo, 'cr': f.crouch, 'ss': f.ss_dir if f.state == 'ss' else 0})
+                        'w': f.wins, 'cb': f.combo, 'cr': f.crouch, 'ss': f.ss_dir if f.state == 'ss' else 0, 'm': round(f.meter)})
         return {'phase': self.phase, 'round': self.round, 'timer': math.ceil(max(0, self.timer) / FPS),
                 'banner': self.banner, 'f': out, 'ev': self.events[-8:], 'finished': self.finished, 'toWin': ROUNDS_TO_WIN}

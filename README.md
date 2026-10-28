@@ -37,7 +37,7 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 | **Poing de Fonte 3D** | Combat 3D façon Tekken 2, 1 contre 1 en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
 | **Forge Fighters** | Combat 2D 1 contre 1, en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
 | **Escadrille 101** | Combat d'avions, 4 à 8 pilotes (robots en renfort) | finir = 1, gagner = 2 | 2 |
-| Grand Prix de la Coulée | Course, 2 à 6 pilotes | franchir l'arrivée = 1, gagner = 2 | 2 |
+| Grand Prix de la Coulée | Kart 3D façon « party kart », 2 à 8 pilotes (robots en renfort) | franchir l'arrivée = 1, gagner = 2 | 2 |
 | Forgeopoly | Plateau aux règles complètes du « monopole », 2 à 4 joueurs | finir = 1, gagner = 2 | 2 |
 | **Coulée Galactique** | Shooter 3D façon Galaga (3e / 1re personne, bonus de tir) | 20 000 points | 1 |
 | **Usine 101** | Gestion d'une forge ou d'une fonderie | tenir 5 ans sans faillite | 1 |
@@ -51,7 +51,9 @@ Ces limites se règlent en haut de `server.py` (`DAILY`, `SOLO_THRESHOLDS`, `QUI
 
 ### Coulée Royale
 
-FPS battle royale dans une grande halle de fonderie en 3D (fours, convoyeurs, piles de moules, conteneurs sur lesquels on grimpe, poches de coulée, silos, bureaux). Chacun arrive à mains nues avec **100 PV** : au sol il n'y a **que des armes à looter**. La fonte en fusion envahit la halle en 5 phases ; le dernier debout gagne.
+FPS battle royale en 3D sur **quatre cartes** au choix dans le salon (ou au hasard) : la **Halle de coulée** (fours, convoyeurs, moules, conteneurs), **La Forge** (îlots de marteaux-pilons, foyers, enclumes, cuves de trempe), **Le Laminoir** (longue halle traversée par le train de laminage, bobines, brames) et le **Parc à ferraille** (à ciel ouvert : tas de ferraille, cubes compactés, grues, bennes). Chacun arrive à mains nues avec **100 PV**. La fonte en fusion envahit la carte en 5 phases ; le dernier debout gagne.
+
+- Les armes sont rangées dans des **coffres** (lueur dorée) : **E** ouvre le coffre, qui éjecte deux armes ; **E** ramasse l'arme la plus proche (ou l'échange contre celle en main) ; **G** lâche l'arme qu'on tient. Les coffres posés sur les toits donnent plus souvent des armes rares.
 
 - Vue **1re personne** (arme en main) ou **3e personne** par-dessus l'épaule, à changer avec **V** (effet d'ondulation). Souris capturée pour viser (haut et bas), joysticks et boutons tactiles sur téléphone.
 - Personnages **articulés** (squelette animé : course, saut, visée, coups, recul, chute) et **vraie physique** : accélération, inertie, sprint (Maj), saut (Espace) et gravité, marches et toits d'obstacles.
@@ -61,10 +63,6 @@ FPS battle royale dans une grande halle de fonderie en 3D (fours, convoyeurs, pi
 - **8 armes de la métallurgie** : pince de forgeron, marteau de forge, masse à frapper, ringard (mêlée) ; riveteuse, canon à grenaille, louche de fonte (éclaboussure), chalumeau (à distance).
 - **4 raretés** qui multiplient les dégâts : commun ×1 (gris), rare ×1,2 (bleu), épique ×1,45 (violet), légendaire ×1,8 (or).
 - **Largage** : tout le monde part accroché au **pont roulant** qui traverse la halle. **Espace** pour sauter quand on veut (largage automatique en bout de course), puis on plane sous une couverture aluminisée en choisissant où atterrir.
-- **Récolte** : frapper le décor en mêlée (même à mains nues) donne des matériaux : **bois** (palettes, bureaux), **brique** (moules, fours) et **acier** (conteneurs, silos, poches, piliers).
-- **Construction** sur une grille de tuiles de 150 : **3** mur, **4** rampe, **5** plancher (ou **B**, molette pour changer de pièce), clic pour poser, **X** pour le matériau, **1 / 2** pour reprendre les armes. 10 matériaux par pièce ; bois 90 PV, brique 140 PV, acier 200 PV. Les murs arrêtent les tirs et se cassent, on monte sur les rampes et les planchers.
-
-Ce mode reprend l'idée des battle royale « avec construction », dans notre propre univers de fonderie, sans personnages, noms ni graphismes d'un jeu existant.
 
 ## Grand écran et transitions
 
@@ -84,7 +82,9 @@ Combat en vraie 3D (three.js) sur les règles de Tekken 2 : quatre boutons de me
 | Projection (dégagement : 1 ou 2 pendant la saisie) | U + J ou I + K | |
 | Coup spécial | ← + I | |
 
-Combos nommés (un coup qui touche peut s'enchaîner tout de suite, + 4 dégâts quand le combo passe) : Martelage (1, 2, → + 3), Coulée continue (1, 2, ↓ + 3, 4), Fauchage (↓ + 3, 4), Enclume (→ + 3, 1), Trempe aérienne (↓↘ + 2, puis deux coups en l'air) et la signature de chaque personnage (1, 2, puis le spécial ; Lamineur : 1, 2, → + 4). Le bouton **📖 Guide des combos** (ou la touche **G**) les montre en animation. Quand un combo passe : bandes noires, flash, titre métallique, tremblement et annonceur à voix grave.
+Combos nommés (un coup qui touche peut s'enchaîner tout de suite, + 4 dégâts quand le combo passe) : Martelage (1, 2, → + 3), Coulée continue (1, 2, ↓ + 3, 4), Fauchage (↓ + 3, 4), Enclume (→ + 3, 1), Trempe aérienne (↓↘ + 2, puis deux coups en l'air) et la signature de chaque personnage (1, 2, puis le spécial ; Lamineur : 1, 2, → + 4). Le bouton **📖 Guide des combos** (sur l'écran de la borne avant de lancer, dans le salon, ou la touche **G** en combat) les montre en animation.
+
+**Attaque ultime** : la jauge d'énergie se remplit en frappant et en encaissant. Pleine, **L** (mobile : ULTI) lance une ruée imparable : une ouverture façon anime (bandeau en diagonale, « 奥義 », nom de la technique) puis, **si le coup touche**, une cinématique de 4 s en quatre plans (impact en noir et blanc, envol sous les lignes de vitesse, gros plan pendant la charge, coup final propre au personnage) et 42 dégâts. Esquivée, l'attaquant reste vulnérable. Ultimes : Coulée Éternelle, Marteau-Pilon Divin, Tempête du Désert Noir, Disque Fulgurant, Laminoir Infernal, Mille Rivets.
 
 ### Coulée Galactique
 
@@ -128,7 +128,16 @@ Quatre combattants : Marius le Fondeur (projectile de fonte), Brigitte la Forger
 | Poing · pied · spécial | J · K · L | POING · PIED · SPÉ |
 | Garde | reculer (accroupi pour les coups bas) | ◀ ou ▶ à l'opposé de l'adversaire |
 
-↓ + poing = uppercut qui projette l'adversaire, ↓ + pied = balayette. Un coup qui touche peut s'annuler dans le suivant ; combos nommés : Martelage (J, J, K), Forge infernale (J, J, K, ↓ + K), Fauchage (↓ + K, ↓ + J), Coup de trempe (J, ↓ + J) et la signature de chaque personnage (J, K, L). Guide animé avec **📖 Guide des combos** ou **G**, et grande annonce quand un combo passe.
+↓ + poing = uppercut qui projette l'adversaire, ↓ + pied = balayette. Un coup qui touche peut s'annuler dans le suivant ; combos nommés : Martelage (J, J, K), Forge infernale (J, J, K, ↓ + K), Fauchage (↓ + K, ↓ + J), Coup de trempe (J, ↓ + J) et la signature de chaque personnage (J, K, L). Guide animé avec **📖 Guide des combos** (aussi avant de lancer la partie) ou **G**. La jauge d'énergie sert aux spéciaux (un tiers) et, pleine, à l'**attaque ultime** avec **I** (mobile : ULTI) : même mise en scène façon anime que dans Poing de Fonte 3D, 30 dégâts si elle touche.
+
+### Grand Prix de la Coulée
+
+Course de karts en 3D façon « party kart » avec les six persos de la métallurgie (Marius, Brigitte, Sacha, Nina, Yanis, Léa), chacun avec sa vitesse et son adhérence. Deux circuits : **Circuit de la Coulée** (autour de la fonderie) et **Boucle du Laminoir** (plus long, épingles serrées). 3 tours, robots en renfort jusqu'à 6 pilotes.
+
+- Vue **3e personne** derrière le kart ou **1re personne** au volant (**V**), **C** pour regarder derrière.
+- **Dérapage** : Maj ou Espace en tournant, puis relâcher pour un mini-turbo (bleu puis orange selon la durée). Le hors-piste (sable de moulage) freine, les murets font rebondir.
+- **Caisses à outils** sur la piste, avec des objets de la métallurgie (les derniers reçoivent les plus puissants) : lingot d'acier et flaque d'huile de trempe (posés derrière soi), boulet de fonte (tiré tout droit), poche de fonte guidée (file vers le kart devant), bouteille d'oxygène (turbo), tablier aluminisé (invincible et plus rapide), coupure de courant (ralentit tous les autres). **E** ou clic pour l'utiliser.
+- Mon kart est piloté dans le navigateur ; le serveur vérifie les positions, gère les objets, les collisions, le classement et les arrivées.
 
 ### Escadrille 101
 
@@ -151,14 +160,14 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 - `combos.py` : combos nommés des deux jeux de combat
 - `planes.py` : moteur du combat d'avions
 - `forgeopoly.py` : règles complètes du jeu de plateau (et robots qui achètent, construisent et négocient)
-- `race.py` : circuit, robots et arrivées de la course
+- `kart.py` : Grand Prix en karts (circuits, objets, robots, classement)
 - `quiz_data.py` : questions du quiz (la première réponse de chaque liste est la bonne)
 - `public/` : la borne
   - `index.html`, `style.css` : la borne et son écran
   - `intro.js` : générique d'ouverture
   - `cabinet.js` : menu de sélection, pupitre, pseudo, classement
   - `app.js` : jeux solo, quiz, tickets à gratter
-  - `online.js` : salons et Grand Prix
+  - `online.js` : salons et résultats ; `kart.js` : le Grand Prix en karts 3D
   - `forgeo.js` : plateau animé de Forgeopoly ; `forgeo3d.js` : le même plateau en relief 3D
   - `combos.js` : guide des combos animé et annonce des combos réussis
   - `royale.js` : Coulée Royale en FPS / TPS (squelettes animés, arme en main, prédiction des déplacements)

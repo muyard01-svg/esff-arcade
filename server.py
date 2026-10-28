@@ -21,7 +21,7 @@ from aiohttp import web, WSMsgType
 from fighter import Fight
 from forgeopoly import Forgeopoly
 from planes import Dogfight
-from race import Race
+from kart import Kart
 from tekken import Tournament
 from royale import Royale
 from quiz_data import QUESTIONS
@@ -50,7 +50,7 @@ QUIZ_LEN = 10
 QUIZ_PASS = 7
 IP_DAILY_CAP = 25
 
-GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Race}
+GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart}
 SOLO_GAMES = ['galaxie', 'usine', 'coulee', 'enclume', 'teintes', 'poche', 'quiz']
 ROOMS: dict[str, 'Room'] = {}
 TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{16,40}$')
@@ -396,7 +396,8 @@ async def ws_handler(request):
             t = data.get('t')
             name = clean_name(data.get('name')) or 'Fondeur'
             opt = data.get('opt') if isinstance(data.get('opt'), dict) else {}
-            opt = {'char': str(opt.get('char', ''))[:20]} if opt.get('char') else {}
+            # options autorisées : personnage (combats, métier) et carte (battle royale, circuit)
+            opt = {k: str(opt[k])[:20] for k in ('char', 'map') if opt.get(k)}
             if t in ('create', 'join'):
                 await leave()
                 if t == 'create':

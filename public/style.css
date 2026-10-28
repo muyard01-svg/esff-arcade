@@ -732,3 +732,23 @@ body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min
 .fg3d .fgo-side .fgo-actions .btn { font-size: 14px; }
 .fgo-viewbtn { align-self: flex-start; gap: 6px; }
 .fgo-viewbtn kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 4px; background: #2a2d31; border: 1px solid #4a4e54; font: 800 11px var(--display); }
+.ry-maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; width: 100%; }
+.ry-map { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 2px solid var(--line); background: #121417; color: var(--ink); cursor: pointer; text-align: left; }
+.ry-map b { font: 800 15px var(--display); text-transform: uppercase; }
+.ry-map small { font: 500 11px Archivo, sans-serif; color: var(--muted); line-height: 1.3; }
+.ry-map.on { border-color: #EC641E; background: rgba(236,100,30,.15); }
+
+/* ================= Attaque ultime ================= */
+.ult-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 70; pointer-events: none; border-radius: 8px; }
+.cg-demo.ult-host { position: relative; }
+.cg-demo.ult-host .ult-layer { position: absolute; left: 0; top: 0; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.cfx.lite { place-items: start center; padding-top: 9%; }
+.cfx.lite .cfx-txt { animation: cfxLite 1.5s forwards; }
+.cfx.lite .cfx-txt b { font-size: clamp(16px, 5cqw, 40px); color: #ffd27a; -webkit-text-stroke: 1.5px #1a0d05; text-shadow: 0 3px 0 #000; }
+.cfx.lite .cfx-txt em { animation: none; transform: skewX(-12deg); }
+@keyframes cfxLite { 0% { opacity: 0; transform: translateY(-14px) scale(1.3); } 12%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+.cg-ult { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 10px; border-radius: 10px; border: 1px solid var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.cg-ult b { font: 900 18px var(--display); text-transform: uppercase; color: var(--tone); }
+.cg-ult em { grid-column: 1 / -1; font: 500 12px Archivo, sans-serif; color: var(--muted); font-style: normal; }
+.cg-ult .btn { grid-column: 1 / -1; justify-self: start; }
+.combo-guide.page { position: fixed; z-index: 200; }

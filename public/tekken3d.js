@@ -177,10 +177,10 @@ function startTekkenClient() {
   hud.classList.add('tk-hud');
   const pad = document.createElement('div'); pad.className = 'touch-pad';
   pad.innerHTML = `<div class="grp"><button data-m="1">◀</button><button data-m="4">▲</button><button data-m="8">▼</button><button data-m="2">▶</button></div>
-    <div class="grp"><button data-m="16" class="warm">1</button><button data-m="32" class="warm">2</button><button data-m="64" class="hot">3</button><button data-m="128" class="hot">4</button></div>`;
+    <div class="grp"><button data-m="16" class="warm">1</button><button data-m="32" class="warm">2</button><button data-m="64" class="hot">3</button><button data-m="128" class="hot">4</button><button data-m="256" class="hot">ULTI</button></div>`;
   wrap.appendChild(pad);
   const hint = document.createElement('p'); hint.className = 'keys-hint';
-  hint.textContent = '← → BOUGER · ↑↓ BREF = PAS DE CÔTÉ · U I J K = 1 2 3 4 · ↓↘+I UPPERCUT · U+J PROJECTION · ←+I SPÉCIAL';
+  hint.textContent = '← → BOUGER · ↑↓ BREF = PAS DE CÔTÉ · U I J K = 1 2 3 4 · ↓↘+I UPPERCUT · U+J PROJECTION · ←+I SPÉCIAL · L ULTIME';
   wrap.appendChild(hint);
   const unGuide = comboGuideButton(wrap, 'tekken');
 
@@ -283,7 +283,7 @@ function startTekkenClient() {
   let mask = 0, sent = -1, lastSend = 0;
   const KEYMAP = {
     ArrowLeft: 1, KeyA: 1, KeyQ: 1, ArrowRight: 2, KeyD: 2, ArrowUp: 4, KeyW: 4, KeyZ: 4, ArrowDown: 8, KeyS: 8,
-    KeyU: 16, Space: 16, KeyI: 32, KeyL: 32, KeyJ: 64, KeyK: 128,
+    KeyU: 16, Space: 16, KeyI: 32, KeyJ: 64, KeyK: 128, KeyL: 256,
   };
   const pushInput = force => {
     const now = performance.now();
@@ -316,6 +316,9 @@ function startTekkenClient() {
       else if (e.k === 'break') { burst(e.x, e.y, e.z, 24, '#ffffff', 260); sfx(900, 0.2, 'triangle', 0.06, 300); toast('Projection dégagée !'); }
       else if (e.k === 'land') { burst(e.x, 10, e.z, 14, '#c4a06e', 160); sfx(70, 0.2, 'sine', 0.08); }
       else if (e.k === 'ko') { shake = 0.6; sfx(55, 0.7, 'sawtooth', 0.08, -20); }
+      else if (e.k === 'ult') ultCutIn(screen, e.ch, e.seat === mySeat);
+      else if (e.k === 'ulthit') ultScene(screen, e.ch, e.foe, e.dmg, e.seat === mySeat);
+      else if (e.k === 'ultmiss') ultMiss(screen);
       else if (e.k === 'combo') { const f = v.f[e.seat]; comboFx(screen, e.name, e.n, (TK_ROSTER[f.ch] || TK_ROSTER.fondeur).color, e.seat === mySeat); shake = 0.5; }
     }
   }
@@ -390,6 +393,14 @@ function startTekkenClient() {
       g.font = '600 13px Archivo, sans-serif'; g.fillStyle = C.color === '#2E3238' ? '#c6cad0' : C.color;
       g.fillText(`${C.name} · ${C.title}`, left ? x0 : x0 + bw, by + 64);
       g.shadowBlur = 0;
+      // jauge d'énergie de l'attaque ultime
+      const ew = 220, ex = left ? x0 + bw - ew : x0, ey = by + 72, en = Math.min(100, f.m || 0), full = en >= 100;
+      g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(ex - 2, ey - 2, ew + 4, 12);
+      const eg = g.createLinearGradient(ex, 0, ex + ew, 0); eg.addColorStop(0, '#2b6cb0'); eg.addColorStop(1, full ? '#fff3c0' : '#7fd4ff');
+      g.fillStyle = eg; g.fillRect(left ? ex + ew - ew * en / 100 : ex, ey, ew * en / 100, 8);
+      g.font = '400 8px "Press Start 2P", monospace'; g.textAlign = left ? 'right' : 'left';
+      g.fillStyle = full ? (Math.sin(tms / 90) > 0 ? '#fff3c0' : '#7fd4ff') : '#9aa0a6';
+      g.fillText(full ? `ULTIME PRÊTE${idx === mySeat ? ' (L)' : ''}` : 'ÉNERGIE', left ? x0 + bw : x0, ey + 22);
       for (let r = 0; r < cur.toWin; r++) {
         const px = left ? x0 + bw - 14 - r * 22 : x0 + 4 + r * 22;
         g.fillStyle = r < f.w ? '#F5B700' : 'rgba(255,255,255,.18)';

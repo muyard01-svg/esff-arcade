@@ -21,7 +21,9 @@ HALF_W = 34
 STAND_H, CROUCH_H = 180, 110
 
 # touches (masque de bits envoyé par le client)
-L, R, U, D, P, K, S = 1, 2, 4, 8, 16, 32, 64
+L, R, U, D, P, K, S, ULT = 1, 2, 4, 8, 16, 32, 64, 128
+CINE = 132                   # images de la cinématique d'une attaque ultime réussie (4,4 s)
+ULT_DMG = 30
 
 CHARS = {
     'fondeur':    {'name': 'Marius',   'title': 'Le Fondeur',    'color': '#EC641E', 'speed': 1.0,  'power': 1.0,  'hp': 100, 'special': 'coulee'},
@@ -43,6 +45,8 @@ MOVES = {
     'masse':    dict(s=14, a=4, r=22, dmg=15, x0=20, x1=135, y0=0, y1=175, lvl='over', hs=0, bs=16, push=12, cost=35, launch=True),
     'sable':    dict(s=8,  a=5, r=18, dmg=10, x0=20, x1=165, y0=0, y1=185, lvl='high', hs=26, bs=12, push=24, cost=35),
     'meuleuse': dict(s=5,  a=12, r=14, dmg=4, x0=10, x1=95,  y0=60, y1=150, lvl='high', hs=10, bs=6, push=3, cost=35, dash=13, multi=4),
+    # attaque ultime (jauge pleine) : ruée imparable ; si elle touche, la cinématique se lance
+    'ultime':   dict(s=9,  a=9, r=22, dmg=0, x0=0, x1=130, y0=0, y1=190, lvl='high', hs=0, bs=0, push=0, cost=100, dash=12, ult=True),
 }
 FREE = ('idle', 'walk', 'crouch')
 
@@ -102,6 +106,7 @@ class Fight:
         self.inputs, self.press = [0, 0], [0, 0]
         self.ai_mask, self.ai_t, self.ai_seen = [0, 0], [0, 0], [None, None]
         self.round = 1
+        self.cine = None
         self.proj: list[dict] = []
         self.events: list[dict] = []
         self.eid = 0
@@ -156,10 +161,10 @@ class Fight:
         if data.get('a') != 'input' or seat > 1:
             return
         try:
-            m = int(data.get('k', 0)) & 127
+            m = int(data.get('k', 0)) & 255
         except (TypeError, ValueError):
             return
-        self.press[seat] |= m & ~self.inputs[seat] & (P | K | S | U)
+        self.press[seat] |= m & ~self.inputs[seat] & (P | K | S | U | ULT)
         self.inputs[seat] = m
 
     def tick(self, dt, connected):
@@ -180,6 +185,12 @@ class Fight:
     # ---------------- simulation ----------------
     def step(self, connected):
         if self.phase == 'over':
+            return
+        if self.cine:      # cinématique d'ultime : tout est figé jusqu'au coup final
+            self.cine['t'] -= 1
+            self.press = [0, 0]
+            if self.cine['t'] <= 0:
+                self.end_cine()
             return
         for i, f in enumerate(self.f):
             if f.bot or not connected(i):
@@ -268,6 +279,8 @@ class Fight:
                 f.state = 'idle'
             elif f.frame >= mv['s'] + mv['a'] + mv['r']:
                 f.state = 'idle' if f.y <= 0 else 'jump'
+            elif mv.get('ult') and not f.hit_done and f.frame == mv['s'] + mv['a']:
+                self.event('ultmiss', f.x, 100, seat=i)
             return
 
         if f.y > 0:  # en l'air
@@ -279,7 +292,10 @@ class Fight:
         f.air_used = False
         f.facing = 1 if o.x > f.x else -1
         special = CHARS[f.char]['special']
-        if pr & S and f.meter >= MOVES[special]['cost']:
+        if pr & ULT and f.meter >= 100:
+            f.start('ultime')
+            self.event('ult', f.x, 100, seat=i, ch=f.char)
+        elif pr & S and f.meter >= MOVES[special]['cost']:
             f.start(special)
         elif pr & P:
             f.start('upper' if m & D else 'jab')
@@ -340,7 +356,29 @@ class Fight:
         a.hit_done, a.last_hit = True, a.frame
         a.hits += 1
 
+    def start_cine(self, a, d):
+        i = self.f.index(a)
+        self.cine = {'a': i, 'd': 1 - i, 't': CINE}
+        a.state, d.state = 'cine', 'cine'
+        a.vx = d.vx = 0.0
+        a.hit_done = True
+        self.event('ulthit', d.x, 100, big=True, seat=i, ch=a.char, foe=d.char, dmg=ULT_DMG)
+
+    def end_cine(self):
+        a, d = self.f[self.cine['a']], self.f[self.cine['d']]
+        self.cine = None
+        d.hp = max(0.0, d.hp - ULT_DMG * a.power)
+        d.state, d.vy, d.y, d.vx, d.t = 'down', 16.0, 1.0, a.facing * 9.0, int(1.0 * FPS)
+        a.state = 'idle'
+        a.combo = 0
+        self.event('ultend', d.x, 60, big=True, seat=self.f.index(a))
+        if d.hp <= 0 and self.phase == 'fight':
+            self.end_round()
+
     def resolve(self, a, d, mv, hx, hy, name=None, new_attack=True):
+        if mv.get('ult'):          # imparable : on lance la cinématique
+            self.start_cine(a, d)
+            return
         crouching = d.state == 'crouch' or (d.state == 'blockstun' and d.low_guard)
         can_block = d.y <= 0 and (d.state == 'blockstun' or (d.state in FREE and d.blocking))
         if can_block and ((mv['lvl'] == 'low' and not crouching) or (mv['lvl'] == 'over' and crouching)):
@@ -424,8 +462,10 @@ class Fight:
                 mask = (P if r < 0.28 else K if r < 0.46 else D | K if r < 0.58 else D | P if r < 0.68
                         else S if r < 0.78 and can_special else back if r < 0.9 else back | D)
             self.ai_t[i] = random.randint(5, 11)
+        if f.meter >= 100 and dist < 120 and f.state in FREE and random.random() < 0.05:
+            mask = ULT
         self.ai_mask[i] = mask
-        self.press[i] |= mask & ~self.inputs[i] & (P | K | S | U)
+        self.press[i] |= mask & ~self.inputs[i] & (P | K | S | U | ULT)
         self.inputs[i] = mask
 
     # ---------------- état envoyé aux navigateurs ----------------
