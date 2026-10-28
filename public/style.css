@@ -642,5 +642,19 @@ html.intro-on, html.intro-on body { overflow: hidden; }
 .crt:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; }
 .crt:fullscreen .crt-scan, .crt:fullscreen .crt-vignette { opacity: .6; }
 body.pseudo-fs { overflow: hidden; }
-body.pseudo-fs .cabinet { z-index: 500; }
+body.pseudo-fs .cabinet { z-index: 500; filter: none; }   /* le filtre d'ombre enfermerait l'écran fixe dans la borne */
 body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min-height: 0; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+
+/* ================= Coulée Royale ================= */
+.ry-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+.ry-pick { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 2px solid var(--line); background: #121417; color: var(--ink); cursor: pointer; font: 800 15px var(--display); text-transform: uppercase; }
+.ry-pick i { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(0,0,0,.4); }
+.ry-pick.on { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 18%, #121417); }
+.ry-screen { cursor: crosshair; }
+.ry-pad { align-items: center; }
+.ry-stick { position: relative; width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,.06); border: 2px solid var(--line); touch-action: none; flex: none; }
+.ry-stick i { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px; border-radius: 50%; background: #3a3d42; box-shadow: 0 4px 10px rgba(0,0,0,.5); transition: transform .05s; }
+.ry-stick.fire i { background: var(--solidus); }
+.ry-pad .grp { flex-direction: column; flex: none; }
+.ry-pad .grp button { height: 30px; font-size: 12px; max-width: none; }
+@media (max-width: 820px) { .ry-picks { grid-template-columns: repeat(2, 1fr); } }

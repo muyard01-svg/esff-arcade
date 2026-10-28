@@ -102,6 +102,25 @@ function paintArt(box, it) {
       g.fillText(`${FIGHTERS[a].name.toUpperCase()}  VS  ${FIGHTERS[b].name.toUpperCase()}`, 320, 62);
     });
   }
+  if (it.id === 'royale') {
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
+    const g = cv.getContext('2d');
+    const bots = Object.keys(RY_METIERS).map((m, i) => ({ m, a: i * 0.7, r: 60 + (i % 3) * 30 }));
+    return loop((dt, t) => {
+      const s = t / 1000, R = 120 + Math.cos(s * 0.4) * 30;
+      g.fillStyle = '#3a3634'; g.fillRect(0, 0, 640, 300);
+      g.save(); g.beginPath(); g.rect(0, 0, 640, 300); g.arc(320, 150, R, 0, Math.PI * 2, true); g.clip('evenodd');
+      g.fillStyle = '#e8641e'; g.fillRect(0, 0, 640, 300); g.restore();
+      g.strokeStyle = '#ffb347'; g.lineWidth = 4; g.beginPath(); g.arc(320, 150, R, 0, Math.PI * 2); g.stroke();
+      bots.forEach((b, i) => {
+        const x = 320 + Math.cos(s * 0.8 + b.a) * b.r, y = 150 + Math.sin(s * 1.1 + b.a) * b.r * 0.6;
+        g.fillStyle = RY_METIERS[b.m].color; g.beginPath(); g.arc(x, y, 11, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#000'; g.lineWidth = 2; g.stroke();
+        if (Math.sin(s * 6 + i) > 0.6) { g.fillStyle = '#ffe07a'; g.fillRect(x + 12, y - 1, 10, 3); }
+      });
+      g.font = '900 30px "Big Shoulders Display", Impact'; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(`${bots.length} MÉTIERS · 100 PV`, 620, 40);
+    });
+  }
   if (it.id === 'tekken') {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
     const g = cv.getContext('2d');

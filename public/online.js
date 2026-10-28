@@ -38,6 +38,7 @@ function stopClients() {
   if (typeof stopFighter === 'function') stopFighter();
   if (typeof stopPlanes === 'function') stopPlanes();
   if (typeof stopTekken === 'function') stopTekken();
+  if (typeof stopRoyale === 'function') stopRoyale();
 }
 
 /* ---------------- Connexion ---------------- */
@@ -100,7 +101,8 @@ function renderLobbyForm(o, code = '') {
   stopClients();
   room = null; view = null; lastReward = null; quickStart = false;
   $('#hudInfo').textContent = '';
-  const fighterPick = (o.id === 'fighter' || o.id === 'tekken') ? `<label>Choisis ton combattant</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p>` : '';
+  const fighterPick = (o.id === 'fighter' || o.id === 'tekken') ? `<label>Choisis ton combattant</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p>`
+    : o.id === 'royale' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc"></p>` : '';
   stage.innerHTML = `<div class="screen">
     <h4>${o.title}</h4>
     <div class="how">${o.how}</div>
@@ -117,8 +119,10 @@ function renderLobbyForm(o, code = '') {
   </div>`;
   if (o.id === 'fighter') renderCharPick($('#charPick'), $('#charDesc'));
   if (o.id === 'tekken') renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'char3d');
+  if (o.id === 'royale') renderMetierPick($('#charPick'), $('#charDesc'));
   const name = () => { const n = $('#onName').value.trim().slice(0, 16) || 'Fondeur'; save.onlineName = n; persist(); return n; };
-  const opt = () => (o.id === 'fighter' ? { char: save.char || 'fondeur' } : o.id === 'tekken' ? { char: save.char3d || 'fondeur' } : {});
+  const opt = () => (o.id === 'fighter' ? { char: save.char || 'fondeur' } : o.id === 'tekken' ? { char: save.char3d || 'fondeur' }
+    : o.id === 'royale' ? { char: save.metier || 'fondeur' } : {});
   const go = async msg => {
     try { await connect(); send({ ...msg, name: name(), opt: opt() }); } catch (e) { toast(e.message); }
   };
