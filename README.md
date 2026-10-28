@@ -42,6 +42,7 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 | **Coulée Galactique** | Shooter 3D façon Galaga (3e / 1re personne, bonus de tir) | 20 000 points | 1 |
 | **Usine 101** | Gestion d'une forge ou d'une fonderie | tenir 5 ans sans faillite | 1 |
 | Quiz métallurgie | Solo | 7/10 bonnes réponses | 1 |
+| **L'Atelier de Coulée** | Coopération en ligne 3D, 1 à 4 ouvriers (apprentis robots en renfort) | finir = 1, objectif d'équipe atteint = 2 | 2 |
 | Le Moulage 3D | Solo, 3D : moule, noyaux, masselottes, coulée, défauts | 2 100 points | 1 |
 | La Coulée | Solo, moules de formes différentes | 350 points | 1 |
 | Frappe d'enclume | Solo | 250 points | 1 |
@@ -101,6 +102,17 @@ Bonus de tir lâchés par les ennemis abattus (surtout les Grands Creusets) :
 | Rafale | tir rapide, jusqu'à 6 tirs à l'écran (15 s) |
 | Bouclier | encaisse un coup |
 | Bombe | détruit les ennemis en vol et endommage la formation |
+
+### L'Atelier de Coulée (coopération)
+
+Toute l'équipe (1 à 4 joueurs en ligne, chacun avec son ouvrier animé) travaille dans la même fonderie en 3D pour honorer des commandes de pièces (roue = 1 noyau, carter = 2, bloc = 3) en 4 minutes. Objectif d'équipe : 300 points (2 tickets pour tout le monde).
+
+- **Moulage** : apporter 2 seaux de sable au châssis, le tasser (Espace maintenu ; deux fois plus vite à deux), poser les noyaux, fermer le moule.
+- **Pont roulant** : un ouvrier prend les commandes au **pupitre** (E, puis flèches), un autre accroche et décroche (E) le moule ou la poche quand le crochet est au-dessus.
+- **Cubilot** : le charger en gueuses de fonte, coke et castine (1 coke pour 2 gueuses, 1 castine pour 4), lancer la **soufflerie**, percer au **trou de coulée** pour remplir la poche.
+- **Dosage métallurgique** : inoculer la poche au ferrosilicium (½ par unité de fonte) ; la poche refroidit, il faut couler au-dessus de 1330 °C.
+- **Coulée, refroidissement, décochage** sur la grille, puis **expédition**. Chaque pièce est notée : conforme, à retoucher ou rebut (malvenue, reprise, fonte blanche, surinoculation, inclusions de laitier, fonte trop carburée).
+- Seul, un apprenti robot tient le cubilot ; avec un deuxième robot, un apprenti mouleur apporte le sable et tasse.
 
 ### Le Moulage 3D
 
@@ -176,6 +188,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 - `planes.py` : moteur du combat d'avions
 - `forgeopoly.py` : règles complètes du jeu de plateau (et robots qui achètent, construisent et négocient)
 - `kart.py` : Grand Prix en karts (circuits, objets, robots, classement)
+- `atelier.py` : l'Atelier de Coulée en coopération (postes, pont roulant, cubilot, dosage, apprentis robots)
 - `quiz_data.py` : questions du quiz (la première réponse de chaque liste est la bonne)
 - `public/` : la borne
   - `index.html`, `style.css` : la borne et son écran

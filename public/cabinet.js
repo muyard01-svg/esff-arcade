@@ -169,6 +169,21 @@ function paintArt(box, it) {
     return null;
   }
   if (it.id === 'quiz') { box.innerHTML = '<span class="quiz-art">?</span>'; return null; }
+  if (it.id === 'atelier') {   // vue de dessus de l'atelier : ouvriers qui s'activent, pont roulant, cubilot
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
+    const g = cv.getContext('2d');
+    const cols = ['#EC641E', '#5AA8FF', '#7FD48A', '#F5B700'];
+    return loop((dt, t) => {
+      const s = t / 1000;
+      g.fillStyle = '#3a3330'; g.fillRect(0, 0, 640, 300);
+      [[40, 60, '#b08a5a'], [40, 150, '#e2d2a8'], [170, 90, '#6b4c2c'], [170, 190, '#6b4c2c'], [300, 20, '#3a302a'], [340, 20, '#3a302a'], [380, 20, '#3a302a'], [560, 20, '#7a3a2a'], [600, 120, '#1a1a1a'], [600, 160, '#6a6f77'], [600, 200, '#e8e4dc']].forEach(([x, y, c]) => { g.fillStyle = c; g.fillRect(x, y, 34, 34); });
+      g.fillStyle = `rgba(255,140,40,${0.6 + Math.sin(s * 8) * 0.3})`; g.beginPath(); g.arc(577, 37, 12, 0, Math.PI * 2); g.fill();
+      const bx = 330 + Math.sin(s * 0.7) * 180; g.fillStyle = '#F5B700'; g.fillRect(bx - 6, 0, 12, 300);
+      g.fillStyle = '#c9ccd1'; g.beginPath(); g.arc(bx, 150 + Math.sin(s * 1.3) * 90, 9, 0, Math.PI * 2); g.fill();
+      cols.forEach((c, i) => { const x = 320 + Math.cos(s * (0.8 + i * 0.2) + i * 1.6) * (120 + i * 30), y = 160 + Math.sin(s * (1 + i * 0.15) + i) * 70; g.fillStyle = c; g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#000'; g.lineWidth = 2; g.stroke(); });
+      g.font = '900 28px "Big Shoulders Display", Impact'; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText('COOP · 1 À 4 OUVRIERS', 630, 290);
+    });
+  }
   if (it.id === 'moulage') {   // châssis de moulage en perspective, la poche verse, la pièce sort du sable
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
     const g = cv.getContext('2d');

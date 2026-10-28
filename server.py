@@ -22,6 +22,7 @@ from fighter import Fight
 from forgeopoly import Forgeopoly
 from planes import Dogfight
 from kart import Kart
+from atelier import Atelier
 from tekken import Tournament
 from royale import Royale
 from quiz_data import QUESTIONS
@@ -42,7 +43,7 @@ PORT = int(os.environ.get('PORT', '8090'))
 
 # Tickets gagnables par jour, par joueur et par jeu
 DAILY = {'coulee': 1, 'moulage': 1, 'enclume': 1, 'teintes': 1, 'poche': 1, 'quiz': 1, 'galaxie': 1, 'usine': 1,
-         'royale': 2, 'tekken': 2, 'fighter': 2, 'planes': 2, 'forgeopoly': 2, 'course': 2}
+         'royale': 2, 'tekken': 2, 'fighter': 2, 'planes': 2, 'forgeopoly': 2, 'course': 2, 'atelier': 2}
 # Score minimum pour gagner un ticket dans les jeux solo
 SOLO_THRESHOLDS = {'coulee': 350, 'moulage': 2100, 'enclume': 250, 'teintes': 350, 'poche': 400, 'galaxie': 20000, 'usine': 0}
 USINE_MONTHS = 60          # Usine 101 : 5 ans de gestion sans faillite = 1 ticket
@@ -50,7 +51,7 @@ QUIZ_LEN = 10
 QUIZ_PASS = 7
 IP_DAILY_CAP = 25
 
-GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart}
+GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart, 'atelier': Atelier}
 SOLO_GAMES = ['galaxie', 'usine', 'moulage', 'coulee', 'enclume', 'teintes', 'poche', 'quiz']
 ROOMS: dict[str, 'Room'] = {}
 TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{16,40}$')
@@ -343,9 +344,11 @@ class Room:
                 continue
             ip = s.get('ip', '')
             ok, msg = grant(s['player'], self.kind, ip)
-            if place == 0:
+            coop = getattr(self.game, 'coop', False)      # jeu en équipe : la victoire est collective
+            win = getattr(self.game, 'success', False) if coop else place == 0
+            if win:
                 record_win(s['player'], self.kind)
-            if ok and place == 0:
+            if ok and win:
                 ok2, _ = grant(s['player'], self.kind, ip)
                 if ok2:
                     msg = "Victoire ! 2 tickets à gratter gagnés."

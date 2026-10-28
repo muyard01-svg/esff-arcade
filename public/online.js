@@ -34,6 +34,7 @@ const HANDLERS = {
 };
 function stopClients() {
   if (typeof stopKart === 'function') stopKart();
+  if (typeof stopAtelier === 'function') stopAtelier();
   if (typeof stopFighter === 'function') stopFighter();
   if (typeof stopPlanes === 'function') stopPlanes();
   if (typeof stopTekken === 'function') stopTekken();
@@ -102,6 +103,7 @@ function renderLobbyForm(o, code = '') {
   $('#hudInfo').textContent = '';
   const fighterPick = o.id === 'course' ? `<label>Choisis ton pilote</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p><label>Circuit</label><div class="ry-maps" id="mapPick"></div>`
     : (o.id === 'fighter' || o.id === 'tekken') ? `<label>Choisis ton combattant</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p>`
+    : o.id === 'atelier' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc">Dans l'atelier, le métier ne change que l'apparence de ton ouvrier.</p>`
     : o.id === 'royale' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc"></p><label>Carte</label><div class="ry-maps" id="mapPick"></div>` : '';
   stage.innerHTML = `<div class="screen">
     <h4>${o.title}</h4>
@@ -120,12 +122,14 @@ function renderLobbyForm(o, code = '') {
   if (o.id === 'fighter') renderCharPick($('#charPick'), $('#charDesc'));
   if (o.id === 'tekken') renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'char3d');
   if (o.id === 'course') { renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'charKart'); renderTrackPick($('#mapPick')); }
+  if (o.id === 'atelier') renderMetierPick($('#charPick'), $('#charDesc'));
   if (o.id === 'royale') { renderMetierPick($('#charPick'), $('#charDesc')); renderMapPick($('#mapPick')); }
   if (o.id === 'fighter' || o.id === 'tekken') { const b = document.createElement('button'); b.className = 'btn btn-sm btn-ghost combo-btn'; b.type = 'button'; b.textContent = '📖 Guide des combos'; b.addEventListener('click', () => openComboGuide(o.id)); $('#charDesc').after(b); }
   const name = () => { const n = $('#onName').value.trim().slice(0, 16) || 'Fondeur'; save.onlineName = n; persist(); return n; };
   const opt = () => (o.id === 'fighter' ? { char: save.char || 'fondeur' } : o.id === 'tekken' ? { char: save.char3d || 'fondeur' }
     : o.id === 'royale' ? { char: save.metier || 'fondeur', map: save.ryMap || 'random' }
-    : o.id === 'course' ? { char: save.charKart || 'fondeur', map: save.kartMap || 'random' } : {});
+    : o.id === 'course' ? { char: save.charKart || 'fondeur', map: save.kartMap || 'random' }
+    : o.id === 'atelier' ? { char: save.metier || 'fondeur' } : {});
   const go = async msg => {
     try { await connect(); send({ ...msg, name: name(), opt: opt() }); } catch (e) { toast(e.message); }
   };
