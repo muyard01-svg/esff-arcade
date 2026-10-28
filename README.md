@@ -33,7 +33,7 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 
 | Jeu | Type | Ticket | Max / jour |
 |---|---|---|---|
-| **Coulée Royale** | Battle royale des métiers de la métallurgie, jusqu'à 16 (robots en renfort), vue 2D ou 3D | finir = 1, gagner = 2 | 2 |
+| **Coulée Royale** | FPS battle royale des métiers de la métallurgie, jusqu'à 16 (robots en renfort), 1re ou 3e personne | finir = 1, gagner = 2 | 2 |
 | **Poing de Fonte 3D** | Combat 3D façon Tekken 2, 1 contre 1 en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
 | **Forge Fighters** | Combat 2D 1 contre 1, en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
 | **Escadrille 101** | Combat d'avions, 4 à 8 pilotes (robots en renfort) | finir = 1, gagner = 2 | 2 |
@@ -51,13 +51,15 @@ Ces limites se règlent en haut de `server.py` (`DAILY`, `SOLO_THRESHOLDS`, `QUI
 
 ### Coulée Royale
 
-Battle royale dans une grande halle de fonderie (fours, convoyeurs, piles de moules, conteneurs, poches de coulée, silos, bureaux). Chacun commence à mains nues avec **100 PV**. La fonte en fusion envahit la halle en 5 phases ; le dernier debout gagne.
+FPS battle royale dans une grande halle de fonderie en 3D (fours, convoyeurs, piles de moules, conteneurs sur lesquels on grimpe, poches de coulée, silos, bureaux). Chacun arrive à mains nues avec **100 PV** : au sol il n'y a **que des armes à looter**. La fonte en fusion envahit la halle en 5 phases ; le dernier debout gagne.
 
-- **9 métiers**, chacun avec un petit avantage : forgeron (+15 % en mêlée), fondeur (-40 % de dégâts dans la fonte), mouleur (+8 % de vitesse), noyauteur (soins +40 %), ébarbeur (cadence +12 %), lamineur (25 d'armure au départ), chaudronnier (tabliers +30 %), soudeur (+20 % au chalumeau et à la louche), métallurgiste (voit les armes rares sur la mini-carte).
+- Vue **1re personne** (arme en main) ou **3e personne** par-dessus l'épaule, à changer avec **V** (effet d'ondulation). Souris capturée pour viser (haut et bas), joysticks et boutons tactiles sur téléphone.
+- Personnages **articulés** (squelette animé : course, saut, visée, coups, recul, chute) et **vraie physique** : accélération, inertie, sprint (Maj), saut (Espace) et gravité, marches et toits d'obstacles.
+- Chaque navigateur prédit son propre déplacement ; le serveur vérifie qu'il est atteignable (vitesse, murs, hauteur de saut) et recale sinon. Les tirs (projectiles 3D) sont tranchés par le serveur : **tir à la tête ×1,5**, et chaque élimination rend **25 PV**.
+
+- **9 métiers**, chacun avec un petit avantage : forgeron (+15 % en mêlée), fondeur (-40 % de dégâts dans la fonte), mouleur (+8 % de vitesse), noyauteur (saute 20 % plus haut), ébarbeur (cadence +12 %), lamineur (35 d'armure au départ, qui absorbe 60 % des coups), chaudronnier (-12 % de dégâts reçus), soudeur (+20 % au chalumeau et à la louche), métallurgiste (voit les armes rares sur la mini-carte).
 - **8 armes de la métallurgie** : pince de forgeron, marteau de forge, masse à frapper, ringard (mêlée) ; riveteuse, canon à grenaille, louche de fonte (éclaboussure), chalumeau (à distance).
 - **4 raretés** qui multiplient les dégâts : commun ×1 (gris), rare ×1,2 (bleu), épique ×1,45 (violet), légendaire ×1,8 (or).
-- Trousses de soin (+30 PV) et tabliers aluminisés (+40 d'armure, qui absorbe 60 % des coups).
-- Vue **2D** du dessus ou **3D**, à changer avec **V** (effet d'ondulation). Visée à la souris ; joysticks tactiles sur téléphone.
 
 ## Grand écran et transitions
 
@@ -136,7 +138,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 ## Fichiers
 
 - `server.py` : API (tickets, pseudos, classement, quiz) et salons en ligne
-- `royale.py` : moteur du battle royale (carte, armes, raretés, fonte, robots)
+- `royale.py` : moteur du battle royale (carte 3D, physique, vérification des déplacements, armes, raretés, fonte, robots)
 - `tekken.py` : moteur du combat 3D (déplacements en 3D, hauteurs de coups, projections, jongles, robot)
 - `fighter.py` : moteur du jeu de combat 2D (coups, gardes, manches, robot)
 - `planes.py` : moteur du combat d'avions
@@ -150,7 +152,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
   - `app.js` : jeux solo, quiz, tickets à gratter
   - `online.js` : salons et Grand Prix
   - `forgeo.js` : plateau animé de Forgeopoly
-  - `royale.js` : Coulée Royale en 2D et 3D
+  - `royale.js` : Coulée Royale en FPS / TPS (squelettes animés, arme en main, prédiction des déplacements)
   - `fx.js` : grand écran et transitions à ondulations
   - `tekken3d.js` : arène et personnages 3D (three.js chargé à la demande)
   - `fighter.js`, `planes.js` : combat 2D et avions
