@@ -1,7 +1,7 @@
 /* Arcade 101 — la borne : menu de sélection, pupitre, pseudo, classement, tickets */
 'use strict';
 
-const SOLO_ORDER = ['galaxie', 'usine', 'quiz', 'coulee', 'enclume', 'teintes', 'poche'];
+const SOLO_ORDER = ['galaxie', 'usine', 'moulage', 'quiz', 'coulee', 'enclume', 'teintes', 'poche'];
 const SOLO_TAGS = { galaxie: 'SHOOTER', usine: 'GESTION', quiz: 'QUIZ' };
 const toneOf = gm => (gm.teinte === 'acier' ? '#9aa0a6' : TONES[gm.teinte].hex);
 const MENU = [
@@ -169,6 +169,33 @@ function paintArt(box, it) {
     return null;
   }
   if (it.id === 'quiz') { box.innerHTML = '<span class="quiz-art">?</span>'; return null; }
+  if (it.id === 'moulage') {   // châssis de moulage en perspective, la poche verse, la pièce sort du sable
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
+    const g = cv.getContext('2d');
+    return loop((dt, t) => {
+      const s = t / 1000, ph = (s % 6) / 6;
+      g.clearRect(0, 0, 640, 300);
+      const glowG = g.createRadialGradient(320, 300, 10, 320, 300, 320); glowG.addColorStop(0, 'rgba(236,100,30,.35)'); glowG.addColorStop(1, 'rgba(236,100,30,0)');
+      g.fillStyle = glowG; g.fillRect(0, 0, 640, 300);
+      // châssis et sable
+      g.fillStyle = '#2f6b4a'; g.beginPath(); g.moveTo(170, 170); g.lineTo(470, 170); g.lineTo(520, 250); g.lineTo(120, 250); g.closePath(); g.fill();
+      g.fillStyle = '#b08a5a'; g.beginPath(); g.moveTo(182, 176); g.lineTo(458, 176); g.lineTo(500, 242); g.lineTo(140, 242); g.closePath(); g.fill();
+      // empreinte puis métal qui la remplit
+      const fillK = Math.min(1, Math.max(0, (ph - 0.25) / 0.45));
+      g.fillStyle = '#1a120c'; g.beginPath(); g.ellipse(320, 210, 110, 24, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = `rgba(255,${140 + fillK * 60},40,${fillK})`; g.beginPath(); g.ellipse(320, 210, 110 * fillK, 24 * fillK, 0, 0, Math.PI * 2); g.fill();
+      // noyau
+      g.fillStyle = '#e2d2a8'; g.beginPath(); g.ellipse(320, 206, 22, 8, 0, 0, Math.PI * 2); g.fill();
+      // poche qui bascule et jet
+      const tilt = ph > 0.2 && ph < 0.72 ? 0.6 : 0.1;
+      g.save(); g.translate(300, 70); g.rotate(tilt);
+      g.fillStyle = '#3a3d42'; g.beginPath(); g.moveTo(-40, -26); g.lineTo(30, -26); g.lineTo(22, 22); g.lineTo(-32, 22); g.closePath(); g.fill();
+      g.fillStyle = '#ffb347'; g.fillRect(-36, -24, 62, 7); g.fillStyle = '#5c6067'; g.fillRect(-110, -6, 70, 8);
+      g.restore();
+      if (tilt > 0.5) { const jg = g.createLinearGradient(0, 90, 0, 200); jg.addColorStop(0, '#ffe7a0'); jg.addColorStop(1, '#EC641E'); g.fillStyle = jg; g.fillRect(326 + Math.sin(s * 30), 90, 7, 112); }
+      g.font = '900 30px "Big Shoulders Display", Impact'; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText('NOYAUX · MASSELOTTES · COULÉE', 620, 40);
+    });
+  }
   if (it.id === 'galaxie') {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
     const g = cv.getContext('2d');

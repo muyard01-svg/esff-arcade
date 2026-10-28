@@ -42,7 +42,8 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 | **Coulée Galactique** | Shooter 3D façon Galaga (3e / 1re personne, bonus de tir) | 20 000 points | 1 |
 | **Usine 101** | Gestion d'une forge ou d'une fonderie | tenir 5 ans sans faillite | 1 |
 | Quiz métallurgie | Solo | 7/10 bonnes réponses | 1 |
-| La Coulée | Solo | 350 points | 1 |
+| Le Moulage 3D | Solo, 3D : moule, noyaux, masselottes, coulée, défauts | 2 100 points | 1 |
+| La Coulée | Solo, moules de formes différentes | 350 points | 1 |
 | Frappe d'enclume | Solo | 250 points | 1 |
 | Tri des teintes | Solo | 350 points | 1 |
 | La Poche | Solo | 400 points | 1 |
@@ -100,6 +101,20 @@ Bonus de tir lâchés par les ennemis abattus (surtout les Grands Creusets) :
 | Rafale | tir rapide, jusqu'à 6 tirs à l'écran (15 s) |
 | Bouclier | encaisse un coup |
 | Bombe | détruit les ennemis en vol et endommage la formation |
+
+### Le Moulage 3D
+
+Jeu solo en 3D : on fabrique trois pièces de plus en plus complexes (roue de wagonnet en fonte, carter de pompe en aluminium, bloc-cylindres en fonte). Pour chacune :
+
+1. **Serrage du sable** : arrêter le curseur dans la zone verte (trop peu serré = gale, trop serré = soufflures).
+2. **Noyaux** : choisir le bon noyau dans le bac (des intrus s'y glissent), le tourner avec **R** et le poser dans sa portée.
+3. **Évents** : percer chaque noyau pour que ses gaz s'échappent (sinon soufflures de noyau).
+4. **Masselottes** : en poser au-dessus des points chauds (sinon retassure), sans en mettre partout (chacune coûte du métal).
+5. **Température** : surchauffe adaptée à l'alliage (trop froid = malvenue ou reprise, trop chaud = pénétration).
+6. **Coulée** : maintenir pour verser en gardant le débit dans le vert (trop fort = inclusions d'oxydes, interruption = reprise), relâcher quand c'est plein (sinon bavures).
+7. **Décochage et contrôle** : la chape se soulève, la pièce refroidit, chaque défaut est montré sur la pièce et expliqué ; pièce conforme, à retoucher ou rebut.
+
+100 points par pièce (moins 45 par défaut critique, 15 par défaut mineur), ×10. Ticket à 2 100 points.
 
 ### Usine 101
 

@@ -41,17 +41,17 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 PORT = int(os.environ.get('PORT', '8090'))
 
 # Tickets gagnables par jour, par joueur et par jeu
-DAILY = {'coulee': 1, 'enclume': 1, 'teintes': 1, 'poche': 1, 'quiz': 1, 'galaxie': 1, 'usine': 1,
+DAILY = {'coulee': 1, 'moulage': 1, 'enclume': 1, 'teintes': 1, 'poche': 1, 'quiz': 1, 'galaxie': 1, 'usine': 1,
          'royale': 2, 'tekken': 2, 'fighter': 2, 'planes': 2, 'forgeopoly': 2, 'course': 2}
 # Score minimum pour gagner un ticket dans les jeux solo
-SOLO_THRESHOLDS = {'coulee': 350, 'enclume': 250, 'teintes': 350, 'poche': 400, 'galaxie': 20000, 'usine': 0}
+SOLO_THRESHOLDS = {'coulee': 350, 'moulage': 2100, 'enclume': 250, 'teintes': 350, 'poche': 400, 'galaxie': 20000, 'usine': 0}
 USINE_MONTHS = 60          # Usine 101 : 5 ans de gestion sans faillite = 1 ticket
 QUIZ_LEN = 10
 QUIZ_PASS = 7
 IP_DAILY_CAP = 25
 
 GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart}
-SOLO_GAMES = ['galaxie', 'usine', 'coulee', 'enclume', 'teintes', 'poche', 'quiz']
+SOLO_GAMES = ['galaxie', 'usine', 'moulage', 'coulee', 'enclume', 'teintes', 'poche', 'quiz']
 ROOMS: dict[str, 'Room'] = {}
 TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{16,40}$')
 

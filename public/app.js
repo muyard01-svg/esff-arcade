@@ -21,8 +21,8 @@ const PRODUCTS = {
 const GAMES = [
   {
     id: 'coulee', title: 'La Coulée', teinte: 'liquidus', product: 'rond',
-    pitch: 'Remplis le moule pile à la ligne de coulée. Attention : le métal continue de couler après que tu relâches.',
-    how: '<b>Maintiens</b> (clic, doigt ou Espace) pour verser, <b>relâche</b> avant la ligne. 5 moules, de plus en plus rapides.',
+    pitch: 'Remplis le moule pile à la ligne de coulée. Chaque moule a sa forme (bouteille, cloche, sablier, boulet…) : le niveau file dans les parties étroites et traîne dans les larges. Et le métal continue de couler après que tu relâches.',
+    how: '<b>Maintiens</b> (clic, doigt ou Espace) pour verser, <b>relâche</b> avant la ligne. 6 moules de formes différentes, de plus en plus rapides. La jauge à droite montre le volume versé et celui qu’il faut.',
     run: runCoulee,
   },
   {
@@ -244,21 +244,55 @@ function bigText(g, txt, x, y, size, color = '#fff') {
 }
 
 /* ================= Jeu 1 : La Coulée ================= */
+// formes de moule : largeur relative de l'empreinte selon la hauteur (0 = fond, 1 = haut)
+const COULEE_SHAPES = [
+  { name: 'Lingot', tip: 'Il s’évase vers le bas : le niveau monte de plus en plus vite.', w: h => 1 - 0.35 * h },
+  { name: 'Bouteille', tip: 'Le goulot se remplit d’un coup !', w: h => (h < 0.5 ? 1 : h < 0.68 ? 1 - (h - 0.5) / 0.18 * 0.72 : 0.28) },
+  { name: 'Cloche', tip: 'Large en bas, fine en haut.', w: h => 0.3 + 0.7 * (1 - h) ** 1.7 },
+  { name: 'Entonnoir', tip: 'Fin en bas, large en haut : ça ralentit en montant.', w: h => 0.18 + 0.82 * h },
+  { name: 'Sablier', tip: 'Étranglé au milieu : attention au passage rapide.', w: h => 0.22 + 0.78 * Math.abs(2 * h - 1) ** 1.2 },
+  { name: 'Gradins', tip: 'Trois marches : le débit change à chaque palier.', w: h => (h < 0.34 ? 1 : h < 0.67 ? 0.62 : 0.3) },
+  { name: 'Boulet', tip: 'Une sphère : lent au milieu, rapide aux bouts.', w: h => Math.max(0.12, 2 * Math.sqrt(Math.max(0, h * (1 - h)))) },
+  { name: 'Vase', tip: 'Ventre, col étroit, puis évasé.', w: h => 0.5 + 0.38 * Math.sin(h * Math.PI * 1.6 + 0.3) },
+  { name: 'Rouet', tip: 'Une roue à rayons : alternance de vides et de pleins.', w: h => (Math.floor(h * 6) % 2 ? 0.35 : 1) },
+];
+
 function runCoulee(stage, api) {
-  const W = 360, H = 520, ROUNDS = 5;
+  const W = 360, H = 520, ROUNDS = 6;
   const { c, g } = makeCanvas(stage, W, H);
-  const mold = { x: 100, y: 230, w: 160, h: 240 };
-  let round = 0, score = 0, level, target, tol, flow, rate, holding = false, phase, timer = 0, msg = '', msgColor = '#fff', poured, pts = 0;
+  const mold = { x: 70, y: 215, w: 220, h: 255 };
+  const STEPS = 200;
+  let round = 0, score = 0, level, vol, target, tol, flow, rate, holding = false, phase, timer = 0, msg = '', msgColor = '#fff', poured, pts = 0;
+  let shape, cum, order = [];
   const parts = [];
+
+  // volume cumulé (aire de la coupe) en fonction de la hauteur, normalisé à 1
+  function prepare(sh) {
+    cum = [0];
+    for (let i = 1; i <= STEPS; i++) cum.push(cum[i - 1] + sh.w((i - 0.5) / STEPS));
+    const total = cum[STEPS];
+    cum = cum.map(v => v / total);
+  }
+  const levelOf = v => {   // hauteur atteinte pour un volume versé donné
+    if (v <= 0) return 0;
+    if (v >= 1) return 1;
+    let lo = 0, hi = STEPS;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] <= v) lo = m; else hi = m; }
+    return (lo + (v - cum[lo]) / (cum[hi] - cum[lo] || 1)) / STEPS;
+  };
+  const volOf = h => { const i = Math.min(STEPS - 1, Math.floor(h * STEPS)); return cum[i] + (cum[i + 1] - cum[i]) * (h * STEPS - i); };
 
   function next() {
     round++;
-    level = 0; flow = 0; poured = false; msg = '';
-    target = rand(0.42, 0.86);
-    tol = 0.075 - round * 0.008;
-    rate = 0.26 + round * 0.07;
+    if (!order.length) order = COULEE_SHAPES.map((_, i) => i).sort(() => Math.random() - 0.5);
+    shape = COULEE_SHAPES[order.pop()];
+    prepare(shape);
+    level = 0; vol = 0; flow = 0; poured = false; msg = '';
+    target = rand(0.42, 0.88);
+    tol = 0.07 - round * 0.006;
+    rate = 0.2 + round * 0.04;                   // débit en part du volume total par seconde
     phase = 'ready';
-    api.info(`Moule ${round}/${ROUNDS}`);
+    api.info(`Moule ${round}/${ROUNDS} · ${shape.name}`);
   }
   next();
 
@@ -274,19 +308,29 @@ function runCoulee(stage, api) {
       msgColor = '#ff8a8a'; SFX.bad();
     }
     score += pts; api.score(score);
-    phase = 'result'; timer = 1.5;
+    phase = 'result'; timer = 1.6;
   }
 
   const offInput = holdInput(c,
     () => { if (phase === 'ready' || phase === 'pour') { holding = true; phase = 'pour'; poured = true; } },
     () => { holding = false; });
 
+  // contour de l'empreinte (moitié gauche puis droite), en coordonnées écran
+  const outline = () => {
+    const pts2 = [], cx = mold.x + mold.w / 2;
+    for (let i = 0; i <= 60; i++) { const h = i / 60; pts2.push([cx - shape.w(h) * mold.w / 2, mold.y + mold.h - h * mold.h]); }
+    for (let i = 60; i >= 0; i--) { const h = i / 60; pts2.push([cx + shape.w(h) * mold.w / 2, mold.y + mold.h - h * mold.h]); }
+    return pts2;
+  };
+
   const stop = loop((dt, t) => {
     if (phase === 'pour') {
       flow += ((holding ? rate : 0) - flow) * Math.min(1, dt * 5);
-      level += flow * dt;
-      if (flow > 0.02 && Math.random() < 0.6) sparks(parts, rand(170, 190), mold.y + mold.h - level * mold.h, 1, 25);
-      if (level >= 1) { level = 1; pts = 0; msg = 'DÉBORDEMENT !'; msgColor = '#ff8a8a'; SFX.bad(); sparks(parts, W / 2, mold.y, 40, 20); phase = 'result'; timer = 1.5; }
+      vol += flow * dt;
+      level = levelOf(vol);
+      const cxp = mold.x + mold.w / 2;
+      if (flow > 0.02 && Math.random() < 0.6) sparks(parts, rand(cxp - 10, cxp + 10), mold.y + mold.h - level * mold.h, 1, 25);
+      if (vol >= 1) { level = 1; pts = 0; msg = 'DÉBORDEMENT !'; msgColor = '#ff8a8a'; SFX.bad(); sparks(parts, W / 2, mold.y, 40, 20); phase = 'result'; timer = 1.6; }
       else if (!holding && poured && flow < 0.004) evaluate();
     } else if (phase === 'result') {
       flow *= 0.9;
@@ -299,51 +343,69 @@ function runCoulee(stage, api) {
 
     /* --- rendu --- */
     bgWorkshop(g, W, H);
+    const cx = mold.x + mold.w / 2;
     // poche de coulée
     const tilt = clamp(flow / rate, 0, 1) * 0.55;
     g.save();
-    g.translate(150, 95); g.rotate(tilt);
-    g.fillStyle = '#4a4e54'; g.fillRect(-120, -6, 70, 10); // manche
+    g.translate(cx - 30, 85); g.rotate(tilt);
+    g.fillStyle = '#4a4e54'; g.fillRect(-120, -6, 70, 10);
     g.beginPath(); g.moveTo(-50, -34); g.lineTo(40, -34); g.lineTo(30, 26); g.lineTo(-40, 26); g.closePath();
     g.fillStyle = '#3a3d42'; g.fill(); g.strokeStyle = '#5c6067'; g.lineWidth = 3; g.stroke();
     const lg = g.createLinearGradient(0, -34, 0, -20); lg.addColorStop(0, '#ffe08a'); lg.addColorStop(1, '#EC641E');
     g.fillStyle = lg; g.fillRect(-46, -32, 82, 9);
     g.restore();
+    // châssis et sable
+    g.fillStyle = '#2f6b4a'; g.fillRect(mold.x - 22, mold.y - 30, mold.w + 44, mold.h + 46);
+    g.fillStyle = '#6a553e'; g.fillRect(mold.x - 14, mold.y - 22, mold.w + 28, mold.h + 30);
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(${i % 2 ? '0,0,0' : '255,230,190'},.08)`; g.fillRect(mold.x - 14 + ((i * 53) % (mold.w + 28)), mold.y - 22 + ((i * 97) % (mold.h + 30)), 3, 3); }
+    // descente de coulée jusqu'au haut de l'empreinte
+    g.fillStyle = '#16120e'; g.fillRect(cx - 9, mold.y - 22, 18, 24);
+    // empreinte
+    const poly = outline();
+    g.beginPath(); poly.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
+    g.fillStyle = '#16120e'; g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 3; g.stroke();
     // jet de métal
     const surfaceY = mold.y + mold.h - level * mold.h;
     if (flow > 0.006) {
       const wdt = 3 + (flow / rate) * 10;
-      const jet = g.createLinearGradient(0, 110, 0, surfaceY);
+      const jet = g.createLinearGradient(0, 100, 0, surfaceY);
       jet.addColorStop(0, '#ffe7a0'); jet.addColorStop(1, '#EC641E');
       g.fillStyle = jet;
-      const wob = Math.sin(t / 40) * 1.5;
-      g.fillRect(180 - wdt / 2 + wob, 108, wdt, surfaceY - 108);
+      g.fillRect(cx - wdt / 2 + Math.sin(t / 40) * 1.5, 98, wdt, surfaceY - 98);
     }
-    // moule (sable)
-    g.fillStyle = '#5a4a3a'; g.fillRect(mold.x - 16, mold.y - 6, mold.w + 32, mold.h + 22);
-    g.fillStyle = '#16120e'; g.fillRect(mold.x, mold.y, mold.w, mold.h);
-    // métal
+    // métal : l'empreinte remplie jusqu'au niveau
     if (level > 0) {
+      g.save();
+      g.beginPath(); poly.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.clip();
       const mg = g.createLinearGradient(0, surfaceY, 0, mold.y + mold.h);
       mg.addColorStop(0, '#ffd56b'); mg.addColorStop(0.25, '#EC641E'); mg.addColorStop(1, '#8a1f1f');
       g.fillStyle = mg;
-      g.beginPath(); g.moveTo(mold.x, mold.y + mold.h);
+      g.beginPath(); g.moveTo(mold.x, mold.y + mold.h + 2);
       for (let x = 0; x <= mold.w; x += 8) g.lineTo(mold.x + x, surfaceY + Math.sin(x / 12 + t / 120) * (flow > 0.01 ? 2.5 : 0.8));
-      g.lineTo(mold.x + mold.w, mold.y + mold.h); g.closePath(); g.fill();
-      g.save(); g.shadowColor = '#EC641E'; g.shadowBlur = 30; g.fillStyle = 'rgba(255,200,90,.25)'; g.fillRect(mold.x, surfaceY - 2, mold.w, 4); g.restore();
+      g.lineTo(mold.x + mold.w, mold.y + mold.h + 2); g.closePath(); g.fill();
+      g.restore();
     }
-    // zone cible
+    // ligne cible et bande de tolérance
     const ty = mold.y + mold.h - target * mold.h, band = tol * mold.h;
-    g.fillStyle = 'rgba(245,183,0,.16)'; g.fillRect(mold.x, ty - band, mold.w, band * 2);
+    g.fillStyle = 'rgba(245,183,0,.14)'; g.fillRect(mold.x - 14, ty - band, mold.w + 28, band * 2);
     g.setLineDash([8, 6]); g.strokeStyle = '#F5B700'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(mold.x - 22, ty); g.lineTo(mold.x + mold.w + 22, ty); g.stroke(); g.setLineDash([]);
-    g.fillStyle = '#F5B700'; g.font = `800 13px ${DISPLAY}`; g.textAlign = 'left';
-    g.fillText('LIGNE', mold.x + mold.w + 24, ty + 4);
+    g.fillStyle = '#F5B700'; g.font = `800 12px ${DISPLAY}`; g.textAlign = 'left';
+    g.fillText('LIGNE', mold.x + mold.w + 18, ty - 6);
+    // jauge de volume versé
+    const need = volOf(target);
+    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(W - 22, mold.y, 10, mold.h);
+    g.fillStyle = '#EC641E'; g.fillRect(W - 22, mold.y + mold.h * (1 - vol), 10, mold.h * vol);
+    g.fillStyle = '#F5B700'; g.fillRect(W - 26, mold.y + mold.h * (1 - need) - 1, 18, 2);
     drawSparks(g, parts, dt);
     // textes
-    if (phase === 'ready') bigText(g, round === 1 ? 'MAINTIENS POUR VERSER' : `MOULE ${round}`, W / 2, 180, 26, '#f2f4f7');
-    if (phase === 'result') { bigText(g, msg, W / 2, 170, 36, msgColor); bigText(g, `+${pts}`, W / 2, 205, 26, '#fff'); }
-    g.fillStyle = '#9aa0a6'; g.font = `600 13px Archivo, sans-serif`; g.textAlign = 'center';
+    g.font = `900 22px ${DISPLAY}`; g.fillStyle = '#f2f4f7'; g.textAlign = 'center';
+    g.fillText(`MOULE « ${shape.name.toUpperCase()} »`, W / 2, 150);
+    g.font = '600 12px Archivo, sans-serif'; g.fillStyle = '#c6cad0'; g.fillText(shape.tip, W / 2, 168);
+    if (phase === 'ready') bigText(g, round === 1 ? 'MAINTIENS POUR VERSER' : `MOULE ${round}`, W / 2, 196, 22, '#f2f4f7');
+    if (phase === 'result') { bigText(g, msg, W / 2, 330, 34, msgColor); bigText(g, `+${pts}`, W / 2, 365, 26, '#fff'); }
+    g.fillStyle = '#9aa0a6'; g.font = '600 13px Archivo, sans-serif'; g.textAlign = 'center';
     g.fillText(`Moule ${round} / ${ROUNDS}`, W / 2, H - 22);
   });
 

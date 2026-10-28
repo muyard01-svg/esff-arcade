@@ -752,3 +752,38 @@ body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min
 .cg-ult em { grid-column: 1 / -1; font: 500 12px Archivo, sans-serif; color: var(--muted); font-style: normal; }
 .cg-ult .btn { grid-column: 1 / -1; justify-self: start; }
 .combo-guide.page { position: fixed; z-index: 200; }
+
+/* ================= Le Moulage 3D ================= */
+.ml-panel { position: absolute; left: 0; top: 0; bottom: 0; width: min(290px, 34%); z-index: 5; padding: 10px; pointer-events: none; overflow: auto; line-height: 1.35; }
+.ml-card { pointer-events: auto; background: rgba(12,10,8,.86); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(4px); display: flex; flex-direction: column; gap: 6px; }
+.ml-card h4 { margin: 0; font: 900 18px var(--display); text-transform: uppercase; color: #F5B700; }
+.ml-card p { margin: 0; font: 500 12px Archivo, sans-serif; color: #d8dde3; }
+.ml-part { font: 400 8px var(--pixel); color: var(--muted); }
+.ml-steps { display: flex; flex-wrap: wrap; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.ml-steps li { font: 700 10px Archivo, sans-serif; padding: 2px 6px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--muted); }
+.ml-steps li.done { color: #7FD48A; }
+.ml-steps li.on { background: #EC641E; color: #fff; }
+.ml-big { font: 900 22px var(--display) !important; color: #fff !important; }
+.ml-tray { display: grid; gap: 4px; }
+.ml-tray button { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; gap: 0 8px; align-items: center; text-align: left; padding: 6px 8px; border-radius: 8px; border: 2px solid var(--line); background: #121417; color: var(--ink); cursor: pointer; font: 700 12px Archivo, sans-serif; }
+.ml-tray button small { grid-column: 2; color: var(--muted); font-size: 10px; }
+.ml-tray button.on { border-color: #7fd4ff; background: rgba(127,212,255,.12); }
+.ml-tray button:disabled { opacity: .3; cursor: default; }
+.ml-ico { grid-row: span 2; width: 26px; height: 26px; background: #e2d2a8; border: 2px solid #8b6a46; }
+.ml-ico.cyl.up { border-radius: 50%; }
+.ml-ico.cyl.x { height: 12px; border-radius: 6px; align-self: center; }
+.ml-ico.cyl.z { width: 12px; border-radius: 6px; justify-self: center; }
+.ml-ico.box.x { height: 14px; align-self: center; }
+.ml-ico.box.z { width: 14px; justify-self: center; }
+.ml-temp { display: flex; align-items: center; gap: 8px; }
+.ml-temp input { flex: 1; accent-color: #EC641E; }
+.ml-temp b { font: 900 20px var(--display); color: #ffb347; min-width: 82px; text-align: right; }
+.ml-verdict { font: 900 20px var(--display) !important; padding: 4px 8px; border-radius: 8px; text-align: center; }
+.ml-verdict.good { background: rgba(46,158,91,.3); color: #7FD48A !important; }
+.ml-verdict.mid { background: rgba(245,183,0,.2); color: #F5B700 !important; }
+.ml-verdict.bad { background: rgba(186,44,58,.35); color: #ff8a8a !important; }
+.ml-defects { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 190px; overflow: auto; }
+.ml-defects li { font: 700 12px Archivo, sans-serif; color: #ffd27a; padding: 4px 6px; border-left: 3px solid #F5B700; background: rgba(255,255,255,.04); }
+.ml-defects li.crit { color: #ff8a8a; border-color: #BA2C3A; }
+.ml-defects li small { display: block; color: #c6cad0; font-weight: 500; font-size: 11px; }
+.ml-panel { scrollbar-width: thin; scrollbar-color: #4a4e54 transparent; }
