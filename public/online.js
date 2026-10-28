@@ -120,6 +120,7 @@ function renderLobbyForm(o, code = '') {
   if (o.id === 'fighter') renderCharPick($('#charPick'), $('#charDesc'));
   if (o.id === 'tekken') renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'char3d');
   if (o.id === 'royale') renderMetierPick($('#charPick'), $('#charDesc'));
+  if (o.id === 'fighter' || o.id === 'tekken') { const b = document.createElement('button'); b.className = 'btn btn-sm btn-ghost combo-btn'; b.type = 'button'; b.textContent = '📖 Guide des combos'; b.addEventListener('click', () => openComboGuide(o.id)); $('#charDesc').after(b); }
   const name = () => { const n = $('#onName').value.trim().slice(0, 16) || 'Fondeur'; save.onlineName = n; persist(); return n; };
   const opt = () => (o.id === 'fighter' ? { char: save.char || 'fondeur' } : o.id === 'tekken' ? { char: save.char3d || 'fondeur' }
     : o.id === 'royale' ? { char: save.metier || 'fondeur' } : {});

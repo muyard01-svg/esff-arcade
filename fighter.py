@@ -6,6 +6,8 @@ from __future__ import annotations
 import math
 import random
 
+from combos import FIGHTER_COMBOS, FIGHTER_SIGNATURES, BONUS, register
+
 FPS = 30
 STAGE_W = 1000
 X_MIN, X_MAX = 60, STAGE_W - 60
@@ -68,6 +70,10 @@ class Fighter:
     def start(self, move):
         self.state, self.move, self.mv, self.frame = 'attack', move, MOVES[move], 0
         self.hit_done, self.hits, self.last_hit = False, 0, -99
+        self.landed = False
+        if getattr(self, 'cancelled', False) and 'cost' in self.mv:
+            self.frame = self.mv['s'] // 2     # un spécial annulé sort plus vite
+        self.cancelled = False
         if self.y <= 0:
             self.vx = 0.0
         if 'cost' in self.mv:
@@ -166,9 +172,9 @@ class Fight:
         if steps == 4:
             self.acc = 0.0
 
-    def event(self, kind, x, y, big=False):
+    def event(self, kind, x, y, big=False, **kw):
         self.eid += 1
-        self.events.append({'id': self.eid, 'k': kind, 'x': round(x), 'y': round(y), 'big': big})
+        self.events.append({'id': self.eid, 'k': kind, 'x': round(x), 'y': round(y), 'big': big, **kw})
         self.events = self.events[-12:]
 
     # ---------------- simulation ----------------
@@ -243,6 +249,11 @@ class Fight:
         if st in ('ko', 'win'):
             f.vx *= 0.8
             return
+        # annulation sur touche : un coup qui a touché peut s'enchaîner dès la fin de sa phase active
+        if st == 'attack' and f.landed and f.y <= 0 and f.frame >= f.mv['s'] and pr & (P | K | S) and 'cost' not in f.mv:
+            st = f.state = 'idle'
+            f.x = min(X_MAX, max(X_MIN, f.x + f.facing * 18))   # petit pas en avant pour rester à portée
+            f.cancelled = True
         if st == 'attack':
             f.frame += 1
             mv = f.mv
@@ -325,11 +336,11 @@ class Fight:
         y0, y1 = a.y + mv['y0'], a.y + mv['y1']
         if hi < d.x - HALF_W or lo > d.x + HALF_W or y1 < d.y or y0 > d.hurt_top():
             return
-        self.resolve(a, d, mv, (lo + hi) / 2 if a.facing > 0 else (lo + hi) / 2, (max(y0, d.y) + min(y1, d.hurt_top())) / 2)
+        self.resolve(a, d, mv, (lo + hi) / 2 if a.facing > 0 else (lo + hi) / 2, (max(y0, d.y) + min(y1, d.hurt_top())) / 2, a.move, a.hits == 0)
         a.hit_done, a.last_hit = True, a.frame
         a.hits += 1
 
-    def resolve(self, a, d, mv, hx, hy):
+    def resolve(self, a, d, mv, hx, hy, name=None, new_attack=True):
         crouching = d.state == 'crouch' or (d.state == 'blockstun' and d.low_guard)
         can_block = d.y <= 0 and (d.state == 'blockstun' or (d.state in FREE and d.blocking))
         if can_block and ((mv['lvl'] == 'low' and not crouching) or (mv['lvl'] == 'over' and crouching)):
@@ -343,7 +354,11 @@ class Fight:
             self.event('block', hx, hy)
             return
         a.combo = a.combo + 1 if d.state in ('hit', 'down') else 1
+        a.landed = True
         dmg = mv['dmg'] * 1.3 * a.power * max(0.5, 1 - 0.1 * (a.combo - 1))
+        named = register(a, name, new_attack, CHARS[a.char]['special'], FIGHTER_COMBOS, FIGHTER_SIGNATURES)
+        if named:
+            dmg += BONUS
         d.hp = max(0.0, d.hp - dmg)
         a.meter = min(100.0, a.meter + 8)
         d.meter = min(100.0, d.meter + 5)
@@ -352,6 +367,8 @@ class Fight:
         else:
             d.state, d.t, d.vx = 'hit', mv['hs'], a.facing * mv['push']
         self.event('hit', hx, hy, big=dmg >= 11)
+        if named:
+            self.event('combo', hx, hy, big=True, seat=self.f.index(a), name=named, n=a.combo)
 
     def update_proj(self):
         keep = []
@@ -367,7 +384,7 @@ class Fight:
             d = self.f[1 - p['owner']]
             if abs(p['x'] - d.x) < HALF_W + 14 and d.y <= p['y'] <= d.hurt_top() and d.state not in ('down', 'getup', 'ko'):
                 a = self.f[p['owner']]
-                self.resolve(a, d, MOVES['coulee'], p['x'], p['y'])
+                self.resolve(a, d, MOVES['coulee'], p['x'], p['y'], 'coulee', True)
                 continue
             keep.append(p)
         self.proj = keep

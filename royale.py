@@ -70,6 +70,23 @@ KILL_HEAL = 25               # PV rendus par élimination (il n'y a plus de soin
 
 # phases de la fonte : (attente s, durée du resserrement s, rayon final, dégâts/s hors zone)
 PHASES = [(45, 25, 1850, 1), (25, 22, 1120, 3), (20, 20, 600, 6), (15, 18, 240, 10), (10, 15, 0, 16)]
+# constructions (à la manière des battle royale de construction) : grille de tuiles, 3 matériaux
+TILE = 150                   # côté d'une tuile de construction
+LEVEL = 150                  # hauteur d'un étage
+BUILD_HP = {'bois': 90, 'brique': 140, 'acier': 200}
+BUILD_COST = 10
+MATS = ('bois', 'brique', 'acier')
+MAT_CAP = 500
+HARVEST = {'palette': 'bois', 'bureau': 'bois', 'moules': 'brique', 'four': 'brique', 'mur': 'brique', 'silo': 'acier',
+           'conteneur': 'acier', 'poche': 'acier', 'pilier': 'acier', 'convoyeur': 'acier'}
+HARVEST_N = 8
+MAX_BUILDS = 450
+# largage : tout le monde part du pont roulant qui traverse la halle, puis plane jusqu'au sol
+BUS_Z = 560
+BUS_TIME = 16.0
+GLIDE_SPEED = 430
+GLIDE_FALL = 200
+
 HEIGHTS = {'mur': CEIL, 'four': 220, 'convoyeur': 40, 'bureau': 190, 'silo': 320, 'pilier': CEIL,
            'moules': 90, 'conteneur': 150, 'poche': 120, 'palette': 28}
 
@@ -133,52 +150,156 @@ def touches(o, x, y, r):
     return (x - nx) ** 2 + (y - ny) ** 2 < r * r
 
 
-def ground_at(x, y, z):
-    """Sol sous les pieds : le plus haut dessus d'obstacle atteignable (pas plus haut que z + STEP)."""
+def piece_box(b):
+    """Boîte (x0, y0, z0, x1, y1, z1) d'un mur ou d'un plancher ; pour une rampe : sa tuile sur un étage."""
+    x0, y0, base = b['gx'] * TILE, b['gy'] * TILE, b['lv'] * LEVEL
+    if b['t'] == 'mur':
+        if b['d'] == 0:
+            return (x0 + TILE - 5, y0, base, x0 + TILE + 5, y0 + TILE, base + LEVEL)
+        return (x0, y0 + TILE - 5, base, x0 + TILE, y0 + TILE + 5, base + LEVEL)
+    if b['t'] == 'sol':
+        return (x0, y0, base - 8, x0 + TILE, y0 + TILE, base)
+    return (x0, y0, base, x0 + TILE, y0 + TILE, base + LEVEL)
+
+
+def ramp_h(b, x, y):
+    fx = min(1.0, max(0.0, (x - b['gx'] * TILE) / TILE))
+    fy = min(1.0, max(0.0, (y - b['gy'] * TILE) / TILE))
+    return b['lv'] * LEVEL + LEVEL * (fx, fy, 1 - fx, 1 - fy)[b['d']]
+
+
+class Builds:
+    """Constructions posées, indexées par tuile (un mur sur une arête appartient aux deux tuiles voisines)."""
+    def __init__(self):
+        self.items, self.tiles, self.keys = {}, {}, set()
+
+    @staticmethod
+    def tiles_of(b):
+        t = [(b['gx'], b['gy'])]
+        if b['t'] == 'mur':
+            t.append((b['gx'] + 1, b['gy']) if b['d'] == 0 else (b['gx'], b['gy'] + 1))
+        return t
+
+    def add(self, b):
+        self.items[b['id']] = b
+        self.keys.add(b['key'])
+        for t in self.tiles_of(b):
+            self.tiles.setdefault(t, []).append(b)
+
+    def remove(self, b):
+        self.items.pop(b['id'], None)
+        self.keys.discard(b['key'])
+        for t in self.tiles_of(b):
+            lst = self.tiles.get(t)
+            if lst and b in lst:
+                lst.remove(b)
+
+    def near(self, x, y, r=0.0):
+        out = {}
+        for gx in range(int((x - r) // TILE), int((x + r) // TILE) + 1):
+            for gy in range(int((y - r) // TILE), int((y + r) // TILE) + 1):
+                for b in self.tiles.get((gx, gy), ()):
+                    out[b['id']] = b
+        return out.values()
+
+
+def box_touch(bx, x, y, r):
+    nx = min(max(x, bx[0]), bx[3])
+    ny = min(max(y, bx[1]), bx[4])
+    return (x - nx) ** 2 + (y - ny) ** 2 < r * r
+
+
+def ground_at(x, y, z, bi=None):
+    """Sol sous les pieds : le plus haut dessus d'obstacle, de plancher ou de rampe atteignable (pas plus haut que z + STEP)."""
     g = 0
     for o in around(x, y):
         if o['z'] <= z + STEP and o['z'] > g and touches(o, x, y, PR * 0.7):
             g = o['z']
+    if bi:
+        for b in bi.near(x, y, PR):
+            if b['t'] == 'sol':
+                top = b['lv'] * LEVEL
+                if g < top <= z + STEP and box_touch(piece_box(b), x, y, PR * 0.7):
+                    g = top
+            elif b['t'] == 'rampe' and b['gx'] * TILE <= x <= (b['gx'] + 1) * TILE and b['gy'] * TILE <= y <= (b['gy'] + 1) * TILE:
+                h = ramp_h(b, x, y)
+                if g < h <= z + STEP:
+                    g = h
     return g
 
 
-def body_blocked(x, y, z):
+def body_blocked(x, y, z, bi=None):
     if x < PR or y < PR or x > W - PR or y > H - PR:
         return True
-    return any(o['z'] > z + STEP and touches(o, x, y, PR - 1) for o in around(x, y))
+    if any(o['z'] > z + STEP and touches(o, x, y, PR - 1) for o in around(x, y)):
+        return True
+    if bi:
+        for b in bi.near(x, y, PR):
+            if b['t'] != 'rampe':
+                bx = piece_box(b)
+                if bx[2] < z + BODY and bx[5] > z + STEP and box_touch(bx, x, y, PR - 1):
+                    return True
+    return False
 
 
-def point_blocked(x, y, z):
+def build_at(x, y, z, bi):
+    """Construction qui occupe ce point, sinon None."""
+    if not bi:
+        return None
+    for b in bi.near(x, y):
+        if b['t'] == 'rampe':
+            if b['gx'] * TILE <= x <= (b['gx'] + 1) * TILE and b['gy'] * TILE <= y <= (b['gy'] + 1) * TILE and abs(z - ramp_h(b, x, y)) < 9:
+                return b
+        else:
+            bx = piece_box(b)
+            if bx[0] <= x <= bx[3] and bx[1] <= y <= bx[4] and bx[2] <= z <= bx[5]:
+                return b
+    return None
+
+
+def map_at(x, y, z):
+    for o in GRID.get((int(x // CELL), int(y // CELL)), ()):
+        if o['x'] <= x <= o['x'] + o['w'] and o['y'] <= y <= o['y'] + o['h'] and z <= o['z']:
+            return o
+    return None
+
+
+def point_blocked(x, y, z, bi=None):
     if x < 0 or y < 0 or x > W or y > H or z < 0 or z > CEIL:
         return True
-    return any(o['x'] <= x <= o['x'] + o['w'] and o['y'] <= y <= o['y'] + o['h'] and z <= o['z'] for o in GRID.get((int(x // CELL), int(y // CELL)), ()))
+    return map_at(x, y, z) is not None or build_at(x, y, z, bi) is not None
 
 
-def seg_clear(x1, y1, z1, x2, y2, z2):
+def seg_clear(x1, y1, z1, x2, y2, z2, bi=None):
     n = int(math.hypot(x2 - x1, y2 - y1) // 25) + 1
-    return not any(point_blocked(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n, z1 + (z2 - z1) * k / n) for k in range(1, n))
+    return not any(point_blocked(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n, z1 + (z2 - z1) * k / n, bi) for k in range(1, n))
 
 
-def physics(p, wx, wy, run, jump, dt, M):
-    """Un pas de physique : accélération vers la vitesse voulue, inertie, saut, gravité, collisions."""
-    sp = WALK * M.get('speed', 1.0) * (SPRINT if run else 1.0)
-    k = min(1.0, (ACC_GROUND if p['gd'] else ACC_AIR) * dt)
+def physics(p, wx, wy, run, jump, dt, M, bi=None):
+    """Un pas de physique : accélération vers la vitesse voulue, inertie, saut, gravité, vol plané, collisions."""
+    glide = p.get('gl')
+    sp = GLIDE_SPEED if glide else WALK * M.get('speed', 1.0) * (SPRINT if run else 1.0)
+    k = min(1.0, (3.0 if glide else ACC_GROUND if p['gd'] else ACC_AIR) * dt)
     p['vx'] += (wx * sp - p['vx']) * k
     p['vy'] += (wy * sp - p['vy']) * k
     if jump and p['gd']:
         p['vz'] = JUMP_V * M.get('jump', 1.0)
         p['gd'] = False
     p['vz'] -= GRAVITY * dt
+    if glide:
+        p['vz'] = max(p['vz'], -GLIDE_FALL)
     for axis, v in (('x', 'vx'), ('y', 'vy')):
         old = p[axis]
+        was = body_blocked(p['x'], p['y'], p['z'], bi)      # coincé dans une construction : on peut en sortir
         p[axis] += p[v] * dt
-        if body_blocked(p['x'], p['y'], p['z']):
+        if not was and body_blocked(p['x'], p['y'], p['z'], bi):
             p[axis] = old
             p[v] = 0.0
     p['z'] += p['vz'] * dt
-    g = ground_at(p['x'], p['y'], max(p['z'], 0))
+    g = ground_at(p['x'], p['y'], max(p['z'], 0), bi)
     if p['z'] <= g:
         p['z'], p['vz'], p['gd'] = float(g), 0.0, True
+        p['gl'] = False
     else:
         p['gd'] = False
     if p['z'] + BODY > CEIL:
@@ -221,14 +342,16 @@ class Royale:
             m = (s.get('opt') or {}).get('char')
             if m not in METIERS:
                 m = metiers[i % len(metiers)] if s['bot'] else 'fondeur'
-            x, y = max((free_spot(self.rnd, 60) for _ in range(12)),
-                       key=lambda c: min([math.hypot(c[0] - q['x'], c[1] - q['y']) for q in self.p] or [0]))
+            # chacun a sa place le long du pont roulant (axe y), qui avance ensuite le long de la halle (axe x)
+            y = 260 + (H - 520) * (i + 0.5) / len(seats) + self.rnd.uniform(-40, 40)
+            x = 200.0
             M = METIERS[m]
-            self.p.append({'name': s['name'], 'bot': s['bot'], 'm': m, 'x': x, 'y': y, 'z': 0.0, 'vx': 0.0, 'vy': 0.0, 'vz': 0.0, 'gd': True,
+            self.p.append({'name': s['name'], 'bot': s['bot'], 'm': m, 'x': x, 'y': y, 'z': float(BUS_Z), 'bus': True, 'gl': False, 'lane': y,
+                           'mt': {k: 0 for k in MATS}, 'bcd': 0.0, 'vx': 0.0, 'vy': 0.0, 'vz': 0.0, 'gd': True,
                            'yaw': self.rnd.uniform(-math.pi, math.pi), 'pitch': 0.0, 'hp': 100.0, 'ar': float(M.get('armor', 0)),
                            'slots': [None, None], 'cur': 0, 'cd': 0.0, 'alive': True, 'kills': 0, 'died': None, 'by': None,
                            'swing': 0.0, 'tp': 1, 'srv': s['bot'], 'seen': 0.0, 'kbt': 0.0,
-                           'ai': {'t': 0, 'goal': None, 'side': 1, 'react': 0, 'stuck': 0, 'last': None}})
+                           'ai': {'t': 0, 'goal': None, 'side': 1, 'react': 0, 'stuck': 0, 'last': None, 'drop': self.rnd.uniform(1.0, BUS_TIME - 1.5)}})
         self.inputs = [{'k': 0, 'press': 0} for _ in self.p]
         self.loot = []
         self.lid = 0
@@ -241,6 +364,10 @@ class Royale:
                 x, y = free_spot(self.rnd, 30)
                 self.spawn_loot(x, y, 0)
         self.proj = []
+        self.bi = Builds()
+        self.bid = 0
+        self.bchg, self.brm = set(), []
+        self.crane = 200.0
         self.events, self.eid = [], 0
         self.zone = {'cx': W / 2, 'cy': H / 2, 'r': 2700.0, 'phase': 0, 't': PHASES[0][0], 'shrink': False,
                      'from': (W / 2, H / 2, 2700.0), 'to': None, 'dps': 0}
@@ -298,7 +425,12 @@ class Royale:
 
     # ---------------- entrées ----------------
     def handle(self, seat, data):
-        if data.get('a') != 'input' or seat >= len(self.p):
+        if seat >= len(self.p):
+            return
+        if data.get('a') == 'build':
+            self.try_build(seat, data)
+            return
+        if data.get('a') != 'input':
             return
         try:
             k = int(data.get('k', 0)) & 511
@@ -321,7 +453,7 @@ class Royale:
     def client_move(self, p, pos, tp):
         """Le navigateur annonce sa position prédite : acceptée si elle est atteignable, sinon le joueur est recalé."""
         now = time.monotonic()
-        if not p['alive'] or self.phase != 'play':
+        if not p['alive'] or self.phase != 'play' or p['bus']:
             return
         if p['srv']:   # reprise de contrôle après une déconnexion : on recale d'abord le navigateur
             p['srv'] = False
@@ -337,22 +469,73 @@ class Royale:
         if not all(math.isfinite(v) for v in (x, y, z, vz)):
             return
         el = min(0.6, max(0.0, now - p['seen'])) if p['seen'] else 0.1
-        allowed = WALK * SPRINT * 1.12 * el + 30 + (180 if p['kbt'] > 0 else 0)
-        gz = ground_at(x, y, z)
-        p['air'] = p.get('air', 0.0) + el if z > gz + 2 else 0.0
-        ok = (math.hypot(x - p['x'], y - p['y']) <= allowed and z >= 0 and not body_blocked(x, y, z)
+        bi = self.bi
+        allowed = (GLIDE_SPEED * 1.15 if p['gl'] else WALK * SPRINT * 1.12) * el + 30 + (180 if p['kbt'] > 0 else 0)
+        gz = ground_at(x, y, z, bi)
+        p['air'] = 0.0 if p['gl'] or z <= gz + 2 else p.get('air', 0.0) + el
+        ok = (math.hypot(x - p['x'], y - p['y']) <= allowed and z >= 0
+              and not (body_blocked(x, y, z, bi) and not body_blocked(p['x'], p['y'], p['z'], bi))
               and z <= p['z'] + JUMP_V * 1.25 * el + STEP + 10      # on ne monte pas plus vite qu'un saut
               and (z <= gz + 95 or z <= p['z'] + 1)                  # très haut : seulement en retombant
-              and p['air'] < 2.0)                                    # pas de vol plané
+              and p['air'] < 2.0)                                    # pas de vol plané hors largage
         if ok:
             p['vx'], p['vy'] = (x - p['x']) / max(el, 1 / FPS), (y - p['y']) / max(el, 1 / FPS)
             p['x'], p['y'], p['z'], p['vz'] = x, y, z, vz
-            p['gd'] = z <= ground_at(x, y, z) + 1
+            p['gd'] = z <= ground_at(x, y, z, bi) + 1
+            if p['gd']:
+                p['gl'] = False
         else:
             p['tp'] += 1
             p['vx'] = p['vy'] = 0.0
             p['air'] = 0.0
         p['seen'] = now
+
+    def try_build(self, i, d):
+        p = self.p[i]
+        if self.phase != 'play' or not p['alive'] or p['bus'] or p['bcd'] > 0:
+            return
+        try:
+            t, m = d.get('piece'), d.get('m')
+            gx, gy, lv, dd = int(d.get('gx')), int(d.get('gy')), int(d.get('lv')), int(d.get('d', 0))
+        except (TypeError, ValueError):
+            return
+        if t not in ('mur', 'sol', 'rampe') or m not in MATS or p['mt'][m] < BUILD_COST or not 0 <= lv <= 3 or not 0 <= dd <= 3:
+            return
+        if t == 'mur' and dd >= 2:            # un mur à l'ouest d'une tuile = le mur à l'est de sa voisine
+            gx, gy, dd = (gx - 1, gy, 0) if dd == 2 else (gx, gy - 1, 1)
+        if t == 'sol':
+            dd = 0
+        if not (0 <= gx < W // TILE and 0 <= gy < H // TILE) or len(self.bi.items) >= MAX_BUILDS:
+            return
+        key = (t, gx, gy, lv, dd if t == 'mur' else 0)
+        if key in self.bi.keys:
+            return
+        b = {'id': 0, 't': t, 'gx': gx, 'gy': gy, 'lv': lv, 'd': dd, 'm': m, 'hp': float(BUILD_HP[m]), 'key': key}
+        bx = piece_box(b)
+        if math.hypot((bx[0] + bx[3]) / 2 - p['x'], (bx[1] + bx[4]) / 2 - p['y']) > 300 or abs(lv * LEVEL - p['z']) > LEVEL * 1.6:
+            return
+        if t != 'rampe':   # on ne bâtit pas à travers quelqu'un
+            for o in self.p:
+                if o['alive'] and not o['bus'] and bx[2] < o['z'] + BODY and bx[5] > o['z'] + STEP and box_touch(bx, o['x'], o['y'], PR - 2):
+                    return
+        self.bid += 1
+        b['id'] = self.bid
+        self.bi.add(b)
+        self.bchg.add(b['id'])
+        p['mt'][m] -= BUILD_COST
+        p['bcd'] = 0.1
+        self.event('build', (bx[0] + bx[3]) / 2, (bx[1] + bx[4]) / 2, bx[2], seat=i, t=t)
+
+    def hit_build(self, b, dmg):
+        b['hp'] -= dmg
+        if b['hp'] <= 0:
+            self.bi.remove(b)
+            self.brm.append(b['id'])
+            self.bchg.discard(b['id'])
+            bx = piece_box(b)
+            self.event('bbreak', (bx[0] + bx[3]) / 2, (bx[1] + bx[4]) / 2, (bx[2] + bx[5]) / 2, m=b['m'])
+        else:
+            self.bchg.add(b['id'])
 
     def tick(self, dt, connected):
         self.acc += dt
@@ -386,11 +569,24 @@ class Royale:
         self.time += dt
         self.update_zone(dt)
         z = self.zone
+        self.crane = 200 + (W - 400) * min(1.0, self.time / BUS_TIME)
         for i, p in enumerate(self.p):
             if not p['alive']:
                 continue
             M = METIERS[p['m']]
             inp = self.inputs[i]
+            if p['bus']:   # accroché au pont roulant : Espace pour sauter (automatique en bout de course)
+                p['x'], p['y'], p['z'], p['vx'], p['vy'], p['vz'] = self.crane, p['lane'], float(BUS_Z), 0.0, 0.0, 0.0
+                press = inp['press']
+                inp['press'] = 0
+                auto = (p['bot'] or not connected(i)) and self.time >= p['ai']['drop']
+                if press & JUMP or auto or self.time >= BUS_TIME:
+                    p['bus'], p['gl'], p['gd'] = False, True, False
+                    p['tp'] += 1
+                    p['seen'] = time.monotonic()
+                    self.event('drop', p['x'], p['y'], p['z'], seat=i)
+                continue
+            p['bcd'] = max(0.0, p['bcd'] - dt)
             if p['bot'] or not connected(i):
                 if not p['srv']:
                     p['srv'] = True
@@ -401,7 +597,7 @@ class Royale:
             inp['press'] = 0
             if p['srv']:
                 wx, wy = wish if wish else (0.0, 0.0)
-                physics(p, wx, wy, bool(k & RUN), bool(k & JUMP), dt, M)
+                physics(p, wx, wy, bool(k & RUN), bool(k & JUMP), dt, M, self.bi)
             p['kbt'] = max(0.0, p['kbt'] - dt)
             if press & SWAP:
                 p['cur'] = 1 - p['cur']
@@ -438,7 +634,7 @@ class Royale:
                 old = p['slots'][p['cur']]
                 p['slots'][p['cur']] = {'w': it['w'], 'r': it['r']}
                 if old:
-                    self.spawn_loot(p['x'] + math.cos(p['yaw']) * 34, p['y'] + math.sin(p['yaw']) * 34, ground_at(p['x'], p['y'], p['z']), old['w'], old['r'])
+                    self.spawn_loot(p['x'] + math.cos(p['yaw']) * 34, p['y'] + math.sin(p['yaw']) * 34, ground_at(p['x'], p['y'], p['z'], self.bi), old['w'], old['r'])
             else:
                 continue
             self.loot.remove(it)
@@ -466,7 +662,7 @@ class Royale:
                 dist = math.hypot(dx, dy)
                 if dist > Wp['range'] + PR or abs(o['z'] - p['z']) > 75:
                     continue
-                if abs(wrap(math.atan2(dy, dx) - yaw)) <= Wp['arc'] / 2 + 0.3 and seg_clear(ex, ey, ez - 30, o['x'], o['y'], o['z'] + 55):
+                if abs(wrap(math.atan2(dy, dx) - yaw)) <= Wp['arc'] / 2 + 0.3 and seg_clear(ex, ey, ez - 30, o['x'], o['y'], o['z'] + 55, self.bi):
                     self.damage(i, j, dmg)
                     if Wp.get('kb') and o['alive']:
                         kv = Wp['kb']
@@ -475,6 +671,24 @@ class Royale:
                         if o['srv']:
                             o['vx'] += kx; o['vy'] += ky; o['vz'] = 260; o['gd'] = False
                         self.event('kb', o['x'], o['y'], o['z'], seat=j, vx=round(kx), vy=round(ky), vz=260)
+            # devant soi : une construction (abîmée) ou le décor (récolte de matériaux)
+            cp = math.cos(pitch)
+            for step in range(2, int(Wp['range'] + 20) // 12 + 1):
+                d = step * 12
+                hx, hy, hz = ex + math.cos(yaw) * cp * d, ey + math.sin(yaw) * cp * d, ez - 20 + math.sin(pitch) * d
+                b = build_at(hx, hy, hz, self.bi)
+                if b:
+                    self.hit_build(b, dmg * 1.5)
+                    self.event('bhit', hx, hy, hz, m=b['m'])
+                    break
+                o = map_at(hx, hy, hz)
+                if o:
+                    mat = HARVEST.get(o['k'], 'acier')
+                    n = min(HARVEST_N, MAT_CAP - p['mt'][mat])
+                    if n > 0:
+                        p['mt'][mat] += n
+                        self.event('harvest', hx, hy, hz, seat=i, m=mat, n=n)
+                    break
             return
         dmg = Wp['dmg'] * mult * (M.get('fire', 1.0) if wid in ('chalumeau', 'louche') else 1.0)
         cp = math.cos(pitch)
@@ -507,6 +721,11 @@ class Royale:
                 if pr[6] <= 0:
                     hit = 'fade'
                     break
+                b = build_at(pr[0], pr[1], pr[2], self.bi)
+                if b:
+                    self.hit_build(b, pr[8] * (0.5 if pr[9] == 'flame' else 1.0))
+                    hit = 'wall'
+                    break
                 if point_blocked(pr[0], pr[1], pr[2]):
                     hit = 'wall'
                     break
@@ -530,7 +749,7 @@ class Royale:
 
     def damage(self, src, dst, amount, zone=False, head=False):
         d = self.p[dst]
-        if not d['alive'] or amount <= 0:
+        if not d['alive'] or amount <= 0 or d['bus']:
             return
         if not zone:
             amount *= METIERS[d['m']].get('tough', 1.0)
@@ -547,7 +766,7 @@ class Royale:
             if src is not None:
                 self.p[src]['kills'] += 1
                 self.p[src]['hp'] = min(100.0, self.p[src]['hp'] + KILL_HEAL)
-            g = ground_at(d['x'], d['y'], d['z'])
+            g = ground_at(d['x'], d['y'], d['z'], self.bi)
             for s in d['slots']:
                 if s:
                     self.spawn_loot(d['x'] + self.rnd.uniform(-30, 30), d['y'] + self.rnd.uniform(-30, 30), g, s['w'], s['r'])
@@ -584,7 +803,7 @@ class Royale:
         dz = math.hypot(p['x'] - z['cx'], p['y'] - z['cy'])
         target = None
         look = None
-        seen = best is not None and seg_clear(p['x'], p['y'], p['z'] + EYE, best['x'], best['y'], best['z'] + 60)
+        seen = best is not None and seg_clear(p['x'], p['y'], p['z'] + EYE, best['x'], best['y'], best['z'] + 60, self.bi)
         if not seen:
             ai['react'] = 14 + self.rnd.randrange(14)      # temps de réaction quand quelqu'un apparaît
         if dz > z['r'] * 0.85 and (z['shrink'] or dz > z['r']):
@@ -678,7 +897,8 @@ class Royale:
     def init_payload(self):
         return {'map': {'w': W, 'h': H, 'obs': OBSTACLES, 'ceil': CEIL},
                 'phys': {'walk': WALK, 'sprint': SPRINT, 'accG': ACC_GROUND, 'accA': ACC_AIR, 'jump': JUMP_V, 'grav': GRAVITY,
-                         'step': STEP, 'pr': PR, 'body': BODY, 'eye': EYE, 'head': HEAD},
+                         'step': STEP, 'pr': PR, 'body': BODY, 'eye': EYE, 'head': HEAD, 'glide': GLIDE_SPEED, 'fall': GLIDE_FALL},
+                'build': {'tile': TILE, 'level': LEVEL, 'hp': BUILD_HP, 'cost': BUILD_COST, 'mats': MATS, 'busZ': BUS_Z, 'busTime': BUS_TIME},
                 'weapons': {k: {'name': v['name'], 'kind': v['kind'], 'grav': v.get('grav', 0)} for k, v in WEAPONS.items()},
                 'rarity': [{'name': r[0], 'mult': r[1], 'color': r[2]} for r in RARITY],
                 'metiers': {k: {'name': v['name'], 'color': v['color'], 'perk': v['perk'], 'speed': v.get('speed', 1), 'jump': v.get('jump', 1)}
@@ -690,7 +910,8 @@ class Royale:
             'phase': self.phase, 'countdown': round(max(0.0, self.pt), 1), 'time': round(self.time, 1),
             'p': [{'n': p['name'], 'm': p['m'], 'x': round(p['x'], 1), 'y': round(p['y'], 1), 'z': round(p['z'], 1),
                    'a': round(p['yaw'], 3), 'pt': round(p['pitch'], 2), 'hp': round(p['hp']), 'ar': round(p['ar']), 'al': p['alive'],
-                   'k': p['kills'], 'b': p['bot'], 's': p['slots'], 'c': p['cur'], 'sw': p['swing'] > 0, 'by': p['by'], 'tp': p['tp']}
+                   'k': p['kills'], 'b': p['bot'], 's': p['slots'], 'c': p['cur'], 'sw': p['swing'] > 0, 'by': p['by'], 'tp': p['tp'],
+                   'mt': [p['mt'][k] for k in MATS], 'bu': p['bus'], 'gl': p['gl']}
                   for p in self.p],
             'pr': [[round(q[0]), round(q[1]), round(q[2]), round(q[3]), round(q[4]), round(q[5]), q[9], q[11]] for q in self.proj],
             'z': {'x': round(z['cx']), 'y': round(z['cy']), 'r': round(z['r']), 'sh': z['shrink'], 't': round(max(0, z['t'])),
@@ -699,6 +920,15 @@ class Royale:
             'alive': sum(1 for p in self.p if p['alive']),
             'finished': self.finished,
         }
+        out['crane'] = round(self.crane)
+        pack = lambda b: [b['id'], b['t'], b['gx'], b['gy'], b['lv'], b['d'], b['m'], round(b['hp'])]
+        self.vcount = getattr(self, 'vcount', 0) + 1
+        if self.vcount % 45 == 1:   # liste complète de temps en temps, sinon seulement les changements
+            out['B'] = [pack(b) for b in self.bi.items.values()]
+        elif self.bchg or self.brm:
+            out['bc'] = [pack(self.bi.items[k]) for k in self.bchg if k in self.bi.items]
+            out['br'] = self.brm
+        self.bchg, self.brm = set(), []
         if self.loot_dirty or self.frame % 90 == 0:
             out['loot'] = [[it['id'], it['x'], it['y'], it['z'], it['w'], it['r']] for it in self.loot]
             self.loot_dirty = False

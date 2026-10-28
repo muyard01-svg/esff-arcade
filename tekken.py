@@ -6,6 +6,8 @@ from __future__ import annotations
 import math
 import random
 
+from combos import TEKKEN_COMBOS, TEKKEN_SIGNATURES, TEKKEN_SIG_MOVE, BONUS, register
+
 FPS = 30
 ARENA_R = 520
 GRAVITY = 2.2
@@ -57,6 +59,7 @@ MOVES = {
     'rivet':    mv(7, 9, 14, 6, 125, 'mid', hs=10, bs=6, push=4, anim='kick', limb='R', multi=3),
 }
 FREE = ('idle', 'walk', 'crouch')
+SPECIALS = ('coulee', 'masse', 'sable', 'meuleuse', 'laminage', 'rivet')
 
 
 def unit(x, z):
@@ -96,6 +99,9 @@ class Fighter:
         self.state, self.move, self.mv, self.frame = 'attack', move, MOVES[move], 0
         self.hit_done, self.hits, self.last_hit = False, 0, -99
         self.vx = self.vz = 0.0
+        if getattr(self, 'cancelled', False) and move in SPECIALS:
+            self.frame = self.mv['s'] // 2     # un spécial annulé sort plus vite
+        self.cancelled = self.landed = False
 
     def height(self):
         return CROUCH_H if self.crouch else STAND_H
@@ -159,9 +165,9 @@ class Tournament:
         self.round += 1
         self.place()
 
-    def event(self, kind, x, y, z, big=False):
+    def event(self, kind, x, y, z, big=False, **kw):
         self.eid += 1
-        self.events.append({'id': self.eid, 'k': kind, 'x': round(x), 'y': round(y), 'z': round(z), 'big': big})
+        self.events.append({'id': self.eid, 'k': kind, 'x': round(x), 'y': round(y), 'z': round(z), 'big': big, **kw})
         self.events = self.events[-12:]
 
     # ---------------- entrées ----------------
@@ -295,6 +301,12 @@ class Tournament:
             if f.t <= 0:
                 f.state, f.vx, f.vz = 'idle', 0.0, 0.0
             return
+        # annulation sur touche : un coup qui a touché s'enchaîne dès la fin de sa phase active
+        if (st == 'attack' and getattr(f, 'landed', False) and f.y <= 0 and f.frame >= f.mv['s']
+                and pr & BUTTONS and f.move not in SPECIALS and f.mv['lvl'] != 'throw'):
+            st = f.state = 'idle'
+            f.x, f.z = f.x + f.dir[0] * 14, f.z + f.dir[1] * 14
+            f.cancelled = True
         if st == 'attack':
             f.frame += 1
             mvd = f.mv
@@ -468,7 +480,11 @@ class Tournament:
             return
         juggling = d.state == 'air'
         a.combo = a.combo + 1 if d.state in ('hit', 'air') else 1
+        a.landed = True
         dmg = mvd['dmg'] * a.power * max(0.4, 1 - 0.1 * (a.combo - 1)) * (0.7 if juggling else 1)
+        named = register(a, a.move, a.hits == 1, TEKKEN_SIG_MOVE.get(a.char, CHARS[a.char]['special']), TEKKEN_COMBOS, TEKKEN_SIGNATURES)
+        if named:
+            dmg += BONUS
         d.hp = max(0.0, d.hp - dmg)
         if juggling:
             d.juggle += 1
@@ -484,6 +500,8 @@ class Tournament:
             d.state, d.t = 'hit', mvd['hs']
             d.vx, d.vz = a.dir[0] * mvd['push'], a.dir[1] * mvd['push']
         self.event('hit', hx, hy if not juggling else d.y + 60, hz, big=dmg >= 14)
+        if named:
+            self.event('combo', hx, hy, hz, big=True, seat=i, name=named, n=a.combo)
 
     # ---------------- robot ----------------
     def ai(self, i):

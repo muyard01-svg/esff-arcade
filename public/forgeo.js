@@ -70,6 +70,7 @@ function fgBuild(v) {
       <div class="fgo-card" id="fgoCard" hidden><div class="fgo-card-inner"><div class="fgo-card-back"></div><div class="fgo-card-front"></div></div></div>
     </div>
     <aside class="fgo-side">
+      <button class="btn btn-sm btn-ghost fgo-viewbtn" id="fgoView" type="button">🧊 Plateau 2D / 3D <kbd>V</kbd></button>
       <ul class="fgo-players" id="fgoPlayers"></ul>
       <div class="fgo-detail" id="fgoDetail"><p class="muted small">Clique sur une case pour voir ses loyers, construire ou hypothéquer.</p></div>
       <ol class="fgo-log" id="fgoLog"></ol>
@@ -89,6 +90,8 @@ function fgBuild(v) {
   ro.observe(root.querySelector('#fgoBoard'));
   fg.ro = ro;
   fgSetDice(v.dice, false);
+  root.querySelector('#fgoView').addEventListener('click', fg3dToggle);
+  if (fg3dWanted()) fg3dStart();
 }
 
 /* ---------- affichage ---------- */
@@ -146,6 +149,7 @@ function fgPaint() {
   }
   fgDetail();
   fgOfferModal();
+  if (fg.three) fg.three.sync(v, fg.selected);
   if (!fg.playing && !fg.queue.length) { fg.pos = v.players.map(p => p.pos); fgPlaceTokens(); }
 }
 
@@ -240,6 +244,7 @@ function fgPlaceTokens(instant) {
     t.classList.toggle('cur', s === fg.view.turn);
     if (instant) { void t.offsetWidth; t.style.transition = ''; }
   });
+  if (fg.three) fg.three.tokens(fg.pos, fg.view, instant);
 }
 const fgSleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -252,6 +257,7 @@ function fgSetDice(d, animate) {
     cube.style.transform = `rotateX(${rx + spin}deg) rotateY(${ry + spin}deg)`;
     if (!animate) { void cube.offsetWidth; }
   });
+  if (fg.three) fg.three.dice(d, animate);
 }
 
 async function fgPump() {
@@ -317,10 +323,12 @@ async function fgPlay(a) {
   } else if (a.k === 'buy') {
     const c = root.querySelector(`.fgo-cell[data-sq="${a.sq}"]`);
     if (c) { c.style.setProperty('--own', fg.view.players[a.seat].color); c.classList.add('owned', 'stamp'); setTimeout(() => c.classList.remove('stamp'), 700); }
+    if (fg.three) fg.three.own(a.sq, fg.view.players[a.seat].color);
     sfx(700, 0.1, 'square', 0.04); await fgSleep(250);
   } else if (a.k === 'build') {
     const c = root.querySelector(`.fgo-cell[data-sq="${a.sq}"] .fgo-houses`);
     if (c) { c.innerHTML = a.n === 5 ? '<i class="hotel pop"></i>' : '<i class="house"></i>'.repeat(Math.max(0, a.n - 1)) + (a.n ? '<i class="house pop"></i>' : ''); c.dataset.n = a.n; }
+    if (fg.three) fg.three.build(a.sq, a.n);
     sfx(520, 0.08, 'square', 0.04); setTimeout(() => sfx(780, 0.1, 'square', 0.04), 90);
     await fgSleep(200);
   } else if (a.k === 'auction') {

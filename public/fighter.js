@@ -277,6 +277,7 @@ function startFighterClient() {
   hint.className = 'keys-hint';
   hint.textContent = '← → BOUGER · ↑ SAUTER · ↓ ACCROUPI · J POING · K PIED · L SPÉCIAL · RECULER = GARDE';
   wrap.appendChild(hint);
+  const unGuide = comboGuideButton(wrap, 'fighter');
 
   // ---- décor de la halle de fonderie (pré-rendu) ----
   const bg = document.createElement('canvas');
@@ -369,6 +370,10 @@ function startFighterClient() {
         shake = 0.2; sfx(90, 0.3, 'sawtooth', 0.06);
       } else if (e.k === 'ko') {
         shake = 0.5; sfx(60, 0.6, 'sawtooth', 0.08, -20);
+      } else if (e.k === 'combo') {
+        const f = v.f[e.seat];
+        comboFx(wrap, e.name, e.n, (FIGHTERS[f.ch] || FIGHTERS.fondeur).color, e.seat === mySeat);
+        shake = 0.45;
       }
     }
     v.f.forEach((f, i) => {
@@ -499,6 +504,7 @@ function startFighterClient() {
     push,
     stop() {
       stop();
+      unGuide();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     },

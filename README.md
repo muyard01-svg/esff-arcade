@@ -60,6 +60,11 @@ FPS battle royale dans une grande halle de fonderie en 3D (fours, convoyeurs, pi
 - **9 métiers**, chacun avec un petit avantage : forgeron (+15 % en mêlée), fondeur (-40 % de dégâts dans la fonte), mouleur (+8 % de vitesse), noyauteur (saute 20 % plus haut), ébarbeur (cadence +12 %), lamineur (35 d'armure au départ, qui absorbe 60 % des coups), chaudronnier (-12 % de dégâts reçus), soudeur (+20 % au chalumeau et à la louche), métallurgiste (voit les armes rares sur la mini-carte).
 - **8 armes de la métallurgie** : pince de forgeron, marteau de forge, masse à frapper, ringard (mêlée) ; riveteuse, canon à grenaille, louche de fonte (éclaboussure), chalumeau (à distance).
 - **4 raretés** qui multiplient les dégâts : commun ×1 (gris), rare ×1,2 (bleu), épique ×1,45 (violet), légendaire ×1,8 (or).
+- **Largage** : tout le monde part accroché au **pont roulant** qui traverse la halle. **Espace** pour sauter quand on veut (largage automatique en bout de course), puis on plane sous une couverture aluminisée en choisissant où atterrir.
+- **Récolte** : frapper le décor en mêlée (même à mains nues) donne des matériaux : **bois** (palettes, bureaux), **brique** (moules, fours) et **acier** (conteneurs, silos, poches, piliers).
+- **Construction** sur une grille de tuiles de 150 : **3** mur, **4** rampe, **5** plancher (ou **B**, molette pour changer de pièce), clic pour poser, **X** pour le matériau, **1 / 2** pour reprendre les armes. 10 matériaux par pièce ; bois 90 PV, brique 140 PV, acier 200 PV. Les murs arrêtent les tirs et se cassent, on monte sur les rampes et les planchers.
+
+Ce mode reprend l'idée des battle royale « avec construction », dans notre propre univers de fonderie, sans personnages, noms ni graphismes d'un jeu existant.
 
 ## Grand écran et transitions
 
@@ -78,6 +83,8 @@ Combat en vraie 3D (three.js) sur les règles de Tekken 2 : quatre boutons de me
 | Uppercut qui lance un jongle | ↓ + → + I | |
 | Projection (dégagement : 1 ou 2 pendant la saisie) | U + J ou I + K | |
 | Coup spécial | ← + I | |
+
+Combos nommés (un coup qui touche peut s'enchaîner tout de suite, + 4 dégâts quand le combo passe) : Martelage (1, 2, → + 3), Coulée continue (1, 2, ↓ + 3, 4), Fauchage (↓ + 3, 4), Enclume (→ + 3, 1), Trempe aérienne (↓↘ + 2, puis deux coups en l'air) et la signature de chaque personnage (1, 2, puis le spécial ; Lamineur : 1, 2, → + 4). Le bouton **📖 Guide des combos** (ou la touche **G**) les montre en animation. Quand un combo passe : bandes noires, flash, titre métallique, tremblement et annonceur à voix grave.
 
 ### Coulée Galactique
 
@@ -109,7 +116,7 @@ Les règles officielles du jeu de plateau classique, sur un plateau de 40 cases 
 - hypothèques (levée à +10 %), enchères quand personne n'achète, échanges entre joueurs (terrains et lingots), faillite au profit du créancier ;
 - fin de partie quand il ne reste qu'un joueur, ou au bout de 30 tours (le plus riche gagne).
 
-Animations : dés en 3D, pions (louche, marteau, creuset, enclume) qui avancent case par case, cartes qui se retournent, montants qui s'envolent, maisons et hôtels qui poussent. Clique sur une case pour voir sa fiche, construire ou hypothéquer.
+Plateau **en relief 3D** (three.js, par défaut) : plateau épais avec bandes de couleur en relief, ateliers et usines (maisons et hôtels) en volume, lingots aux couleurs des propriétaires, pions sculptés (louche, marteau, creuset, enclume) qui sautent de case en case, dés qui roulent, ombres. Glisser pour tourner autour, molette pour zoomer, **V** ou le bouton « Plateau 2D / 3D » pour revenir au plateau à plat. Cartes qui se retournent, montants qui s'envolent. Clique sur une case pour voir sa fiche, construire ou hypothéquer.
 
 ### Forge Fighters
 
@@ -121,7 +128,7 @@ Quatre combattants : Marius le Fondeur (projectile de fonte), Brigitte la Forger
 | Poing · pied · spécial | J · K · L | POING · PIED · SPÉ |
 | Garde | reculer (accroupi pour les coups bas) | ◀ ou ▶ à l'opposé de l'adversaire |
 
-Il y a aussi des combos simples : ↓ + poing = uppercut qui projette l'adversaire, ↓ + pied = balayette.
+↓ + poing = uppercut qui projette l'adversaire, ↓ + pied = balayette. Un coup qui touche peut s'annuler dans le suivant ; combos nommés : Martelage (J, J, K), Forge infernale (J, J, K, ↓ + K), Fauchage (↓ + K, ↓ + J), Coup de trempe (J, ↓ + J) et la signature de chaque personnage (J, K, L). Guide animé avec **📖 Guide des combos** ou **G**, et grande annonce quand un combo passe.
 
 ### Escadrille 101
 
@@ -141,6 +148,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 - `royale.py` : moteur du battle royale (carte 3D, physique, vérification des déplacements, armes, raretés, fonte, robots)
 - `tekken.py` : moteur du combat 3D (déplacements en 3D, hauteurs de coups, projections, jongles, robot)
 - `fighter.py` : moteur du jeu de combat 2D (coups, gardes, manches, robot)
+- `combos.py` : combos nommés des deux jeux de combat
 - `planes.py` : moteur du combat d'avions
 - `forgeopoly.py` : règles complètes du jeu de plateau (et robots qui achètent, construisent et négocient)
 - `race.py` : circuit, robots et arrivées de la course
@@ -151,7 +159,8 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
   - `cabinet.js` : menu de sélection, pupitre, pseudo, classement
   - `app.js` : jeux solo, quiz, tickets à gratter
   - `online.js` : salons et Grand Prix
-  - `forgeo.js` : plateau animé de Forgeopoly
+  - `forgeo.js` : plateau animé de Forgeopoly ; `forgeo3d.js` : le même plateau en relief 3D
+  - `combos.js` : guide des combos animé et annonce des combos réussis
   - `royale.js` : Coulée Royale en FPS / TPS (squelettes animés, arme en main, prédiction des déplacements)
   - `fx.js` : grand écran et transitions à ondulations
   - `tekken3d.js` : arène et personnages 3D (three.js chargé à la demande)

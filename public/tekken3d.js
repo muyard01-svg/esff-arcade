@@ -182,6 +182,7 @@ function startTekkenClient() {
   const hint = document.createElement('p'); hint.className = 'keys-hint';
   hint.textContent = '← → BOUGER · ↑↓ BREF = PAS DE CÔTÉ · U I J K = 1 2 3 4 · ↓↘+I UPPERCUT · U+J PROJECTION · ←+I SPÉCIAL';
   wrap.appendChild(hint);
+  const unGuide = comboGuideButton(wrap, 'tekken');
 
   // ---- three.js ----
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -315,6 +316,7 @@ function startTekkenClient() {
       else if (e.k === 'break') { burst(e.x, e.y, e.z, 24, '#ffffff', 260); sfx(900, 0.2, 'triangle', 0.06, 300); toast('Projection dégagée !'); }
       else if (e.k === 'land') { burst(e.x, 10, e.z, 14, '#c4a06e', 160); sfx(70, 0.2, 'sine', 0.08); }
       else if (e.k === 'ko') { shake = 0.6; sfx(55, 0.7, 'sawtooth', 0.08, -20); }
+      else if (e.k === 'combo') { const f = v.f[e.seat]; comboFx(screen, e.name, e.n, (TK_ROSTER[f.ch] || TK_ROSTER.fondeur).color, e.seat === mySeat); shake = 0.5; }
     }
   }
 
@@ -415,6 +417,7 @@ function startTekkenClient() {
     push,
     stop() {
       stop();
+      unGuide();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
       renderer.dispose();
