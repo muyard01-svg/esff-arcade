@@ -1,4 +1,4 @@
-/* Générique d'Arcade 101 : animation façon jeu d'arcade, jouée à l'arrivée sur le site.
+/* Générique d'Arcade 102 : animation façon jeu d'arcade, jouée à l'arrivée sur le site.
    Coulée de fonte → titre en métal en fusion → montage des jeux → logo ESFF → INSERT COIN.
    Une fois par session (rejouable depuis le pied de page). */
 'use strict';
@@ -128,7 +128,7 @@ function playIntro() {
         if (Math.random() < 0.8) spark(cx, by, 3, 0.8);
       }
     }
-    if (t > 1.0) { g.globalAlpha = Math.min(1, (t - 1.0) * 2) * Math.max(0, 1 - (t - 2.2) * 3); pixel('ESFF · 101E PROMOTION PRÉSENTE', W / 2, H * 0.92, 14, '#F5B700'); g.globalAlpha = 1; }
+    if (t > 1.0) { g.globalAlpha = Math.min(1, (t - 1.0) * 2) * Math.max(0, 1 - (t - 2.2) * 3); pixel('ESFF · 102E PROMOTION PRÉSENTE', W / 2, H * 0.92, 14, '#F5B700'); g.globalAlpha = 1; }
   }
 
   function sceneTitle(t) {   // 2.6 → 5.2 s : le titre se remplit de fonte
@@ -136,14 +136,14 @@ function playIntro() {
     const size = 190;
     g.font = `900 ${size * S}px "Big Shoulders Display", Impact, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const fill = ease((t - 0.2) / 1.6);
-    const tw = g.measureText('ARCADE 101').width;
-    g.lineWidth = 3 * S; g.strokeStyle = 'rgba(255,170,90,.55)'; g.strokeText('ARCADE 101', cx, cy);
+    const tw = g.measureText('ARCADE 102').width;
+    g.lineWidth = 3 * S; g.strokeStyle = 'rgba(255,170,90,.55)'; g.strokeText('ARCADE 102', cx, cy);
     g.save();
     const top = cy - size * 0.55 * S, bottom = cy + size * 0.5 * S;
     g.beginPath(); g.rect(cx - tw / 2 - 20, bottom - (bottom - top) * fill + Math.sin(t * 9) * 4 * S, tw + 40, (bottom - top) * fill + 40);
     g.clip();
     const mg = g.createLinearGradient(0, top, 0, bottom); mg.addColorStop(0, '#fff6d0'); mg.addColorStop(0.35, '#F5B700'); mg.addColorStop(0.7, '#EC641E'); mg.addColorStop(1, '#BA2C3A');
-    g.shadowColor = '#ff8a2a'; g.shadowBlur = 50 * S; g.fillStyle = mg; g.fillText('ARCADE 101', cx, cy);
+    g.shadowColor = '#ff8a2a'; g.shadowBlur = 50 * S; g.fillStyle = mg; g.fillText('ARCADE 102', cx, cy);
     g.restore();
     if (t > 1.8) {   // refroidissement : le métal fige en blanc
       const k = Math.min(1, (t - 1.8) / 0.25) * Math.max(0, 1 - (t - 2.05) * 2);
@@ -156,9 +156,9 @@ function playIntro() {
   const CARDS = [
     { label: 'POING DE FONTE 3D', sub: 'combat 1 contre 1', color: '#F5B700' },
     { label: 'COULÉE GALACTIQUE', sub: 'shooter en 3D', color: '#BA2C3A' },
-    { label: 'ESCADRILLE 101', sub: 'avions en ligne', color: '#5AA8FF' },
+    { label: 'ESCADRILLE 102', sub: 'avions en ligne', color: '#5AA8FF' },
     { label: 'GRAND PRIX', sub: 'course en ligne', color: '#EC641E' },
-    { label: 'USINE 101', sub: 'forge ou fonderie ?', color: '#7FD48A' },
+    { label: 'USINE 102', sub: 'forge ou fonderie ?', color: '#7FD48A' },
   ];
   function sceneMontage(t) {  // 5.2 → 9.4 s : un plan par jeu
     const k = Math.min(CARDS.length - 1, Math.floor(t / 0.84)), lt = t - k * 0.84;
@@ -225,7 +225,7 @@ function playIntro() {
   function sceneCoin(t) {     // 12 → fin : INSERT COIN puis extinction du tube
     const off = Math.max(0, t - 1.2) / 0.6;
     if (off < 1) {
-      text('ARCADE 101', W / 2, H * 0.36, 120, '#F5B700');
+      text('ARCADE 102', W / 2, H * 0.36, 120, '#F5B700');
       if (Math.floor(t * 3) % 2 === 0) pixel('INSERT COIN', W / 2, H * 0.56, 26, '#ffffff');
       pixel('APPUIE POUR JOUER', W / 2, H * 0.66, 12, '#9aa0a6');
     }

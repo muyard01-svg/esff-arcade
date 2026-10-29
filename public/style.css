@@ -377,7 +377,7 @@ h1, h2, h3 { margin: 0; }
   .play-wrap::before { content: "↻ Tourne ton téléphone pour jouer en grand"; font: 400 8px/1.6 var(--pixel); color: var(--gold); }
 }
 
-/* ================= Usine 101 (gestion) ================= */
+/* ================= Usine 102 (gestion) ================= */
 .good { color: #7fd48a; } .bad { color: #ff7b7b; }
 .linkish { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: 600 13px var(--body); }
 .usine-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }

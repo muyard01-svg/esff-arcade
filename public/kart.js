@@ -186,7 +186,7 @@ function startKartClient() {
   const gantry = new THREE.Group();
   const yel = M('#F5B700', { metalness: 0.5 });
   [-1, 1].forEach(sd => { const p = new THREE.Mesh(new THREE.BoxGeometry(20, 260, 20), yel); p.position.set(0, 130, sd * (TW / 2 + 40)); gantry.add(p); });
-  const banner = tkTexture(512, 64, (b, w, h) => { b.fillStyle = '#1a1a1a'; b.fillRect(0, 0, w, h); b.fillStyle = '#EC641E'; b.font = '900 40px "Big Shoulders Display", Impact'; b.textAlign = 'center'; b.fillText('GRAND PRIX DE LA COULÉE · ESFF 101', w / 2, 46); });
+  const banner = tkTexture(512, 64, (b, w, h) => { b.fillStyle = '#1a1a1a'; b.fillRect(0, 0, w, h); b.fillStyle = '#EC641E'; b.font = '900 40px "Big Shoulders Display", Impact'; b.textAlign = 'center'; b.fillText('GRAND PRIX DE LA COULÉE · ESFF 102', w / 2, 46); });
   const beamG = new THREE.Mesh(new THREE.BoxGeometry(14, 50, TW + 100), [M('#1a1a1a'), M('#1a1a1a'), M('#1a1a1a'), M('#1a1a1a'), new THREE.MeshBasicMaterial({ map: banner }), new THREE.MeshBasicMaterial({ map: banner })]);
   beamG.position.y = 250; gantry.add(beamG);
   const lightsG = [0, 1, 2, 3].map(k => { const l = new THREE.Mesh(new THREE.SphereGeometry(9, 12, 8), new THREE.MeshBasicMaterial({ color: '#330808' })); l.position.set(-10, 210, -45 + k * 30); gantry.add(l); return l; });

@@ -80,7 +80,7 @@ BOARD = [
     P('Halle d\'essais', 'vert', 320, [28, 150, 450, 1000, 1200, 1400]),
     ST('Navette de Charleville'),
     {'type': 'chance', 'name': 'Coulée surprise'},
-    P('Grand amphi de la 101', 'bleu', 350, [35, 175, 500, 1100, 1300, 1500]),
+    P('Grand amphi de la 102', 'bleu', 350, [35, 175, 500, 1100, 1300, 1500]),
     {'type': 'tax', 'name': 'Casse d\'outillage', 'amount': 100},
     P('Direction de l\'ESFF', 'bleu', 400, [50, 200, 600, 1400, 1700, 2000]),
 ]

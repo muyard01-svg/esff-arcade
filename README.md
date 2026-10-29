@@ -1,4 +1,4 @@
-# Arcade 101 — la borne d'arcade de la promo ESFF 2027
+# Arcade 102 — la borne d'arcade de la promo ESFF 2027
 
 Une borne d'arcade en ligne : on choisit son jeu dans le menu de l'écran, on joue, et on gagne des **tickets à gratter**. Chaque ticket a **1 chance sur 5** de révéler un code **-10 %** à utiliser sur [esff2027.shop](https://www.esff2027.shop).
 
@@ -27,7 +27,7 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 
 ## Générique
 
-À l'arrivée sur le site, un générique animé d'environ 14 secondes se lance, avec une musique chiptune : coulée de fonte, titre ARCADE 101 en métal en fusion, montage des jeux, logo ESFF, puis INSERT COIN. Il passe une fois par session (pas pour un lien d'invitation à un salon). On peut le passer (bouton, Échap, Entrée ou Espace) et le revoir depuis le pied de page. Le son démarre au premier clic, car les navigateurs bloquent le son automatique. Tout est dans `public/intro.js`.
+À l'arrivée sur le site, un générique animé d'environ 14 secondes se lance, avec une musique chiptune : coulée de fonte, titre ARCADE 102 en métal en fusion, montage des jeux, logo ESFF, puis INSERT COIN. Il passe une fois par session (pas pour un lien d'invitation à un salon). On peut le passer (bouton, Échap, Entrée ou Espace) et le revoir depuis le pied de page. Le son démarre au premier clic, car les navigateurs bloquent le son automatique. Tout est dans `public/intro.js`.
 
 ## Les jeux
 
@@ -35,15 +35,15 @@ Le code n'est jamais envoyé au navigateur avant qu'un ticket gagnant ne soit gr
 |---|---|---|---|
 | **Coulée Royale** | FPS battle royale des métiers de la métallurgie, jusqu'à 16 (robots en renfort), 1re ou 3e personne | finir = 1, gagner = 2 | 2 |
 | **Poing de Fonte 3D** | Combat 3D façon Tekken 2, 1 contre 1 en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
-| **Forge Fighters** | Combat 2D 1 contre 1, en ligne ou contre l'ordi | finir = 1, gagner = 2 | 2 |
-| **Escadrille 101** | Combat d'avions, 4 à 8 pilotes (robots en renfort) | finir = 1, gagner = 2 | 2 |
+| **Forge Fighters** | Bagarre de bonshommes-bâtons, 2 à 4 joueurs (robots en renfort) | finir = 1, gagner = 2 | 2 |
+| **Escadrille 102** | Combat aérien 3D (3e personne ou cockpit), 4 à 8 pilotes (robots en renfort) | finir = 1, gagner = 2 | 2 |
 | Grand Prix de la Coulée | Kart 3D façon « party kart », 2 à 8 pilotes (robots en renfort) | franchir l'arrivée = 1, gagner = 2 | 2 |
 | Forgeopoly | Plateau aux règles complètes du « monopole », 2 à 4 joueurs | finir = 1, gagner = 2 | 2 |
 | **Coulée Galactique** | Shooter 3D façon Galaga (3e / 1re personne, bonus de tir) | 20 000 points | 1 |
-| **Usine 101** | Gestion d'une forge ou d'une fonderie | tenir 5 ans sans faillite | 1 |
+| **Usine 102** | Gestion d'une forge ou d'une fonderie | tenir 5 ans sans faillite | 1 |
 | Quiz métallurgie | Solo | 7/10 bonnes réponses | 1 |
 | **L'Atelier de Coulée** | Coopération en ligne 3D, 1 à 4 ouvriers (apprentis robots en renfort) | finir = 1, objectif d'équipe atteint = 2 | 2 |
-| Le Moulage 3D | Solo, 3D : moule, noyaux, masselottes, coulée, défauts | 2 100 points | 1 |
+| Le Moulage 3D | Solo, 3D : sable, serrage, noyautage, remmoulage, évents, masselottes, coulée, défauts | 2 100 points | 1 |
 | La Coulée | Solo, moules de formes différentes | 350 points | 1 |
 | Frappe d'enclume | Solo | 250 points | 1 |
 | Tri des teintes | Solo | 350 points | 1 |
@@ -109,30 +109,32 @@ Bonus de tir lâchés par les ennemis abattus (surtout les Grands Creusets) :
 
 ### L'Atelier de Coulée (coopération)
 
-Toute l'équipe (1 à 4 joueurs en ligne, chacun avec son ouvrier animé) travaille dans la même fonderie en 3D pour honorer des commandes de pièces (roue = 1 noyau, carter = 2, bloc = 3) en 4 minutes. Objectif d'équipe : 300 points (2 tickets pour tout le monde).
+Façon « cuisine en équipe », dans une fonderie équipée d'une **ligne de moulage Disamatic** (1 à 4 joueurs en ligne, apprentis robots en renfort). On honore des commandes pendant 3 min 30 ; 2 étoiles = objectif d'équipe (2 tickets pour tout le monde).
 
-- **Moulage** : apporter 2 seaux de sable au châssis, le tasser (Espace maintenu ; deux fois plus vite à deux), poser les noyaux, fermer le moule.
-- **Pont roulant** : un ouvrier prend les commandes au **pupitre** (E, puis flèches), un autre accroche et décroche (E) le moule ou la poche quand le crochet est au-dessus.
-- **Cubilot** : le charger en gueuses de fonte, coke et castine (1 coke pour 2 gueuses, 1 castine pour 4), lancer la **soufflerie**, percer au **trou de coulée** pour remplir la poche.
-- **Dosage métallurgique** : inoculer la poche au ferrosilicium (½ par unité de fonte) ; la poche refroidit, il faut couler au-dessus de 1330 °C.
-- **Coulée, refroidissement, décochage** sur la grille, puis **expédition**. Chaque pièce est notée : conforme, à retoucher ou rebut (malvenue, reprise, fonte blanche, surinoculation, inclusions de laitier, fonte trop carburée).
-- Seul, un apprenti robot tient le cubilot ; avec un deuxième robot, un apprenti mouleur apporte le sable et tasse.
+- **Choix de la production** avant la partie : **grande série** (petites pièces, brides et raccords, préparation rapide, beaucoup de commandes) ou **petite série** (grosses pièces, collecteurs et blocs moteurs : presse, noyaux, coulée et ébarbage plus longs, deux fois plus de fonte par motte, beaucoup plus de points).
+- **Ligne DISA** : seaux de sable dans la trémie, noyaux tirés à la noyauteuse (Espace maintenu) puis posés au pose-noyau (le nombre de noyaux décide de la pièce), presse DISA (Espace maintenu, deux fois plus vite à deux) ; les mottes avancent sur le convoyeur.
+- **Four à induction** : 2 ferrailles + 1 ferroalliage ; fonte prête, on remplit la poche et on coule chaque motte au passage dans la zone jaune (sinon elle part vide). Un four oublié prend feu : un seau de sable dessus.
+- **Tambour de décochage**, **meuleuse** (ébarbage), **expédition**. On peut poser n'importe quel objet sur n'importe quel comptoir.
+- **Vues** : vue d'ensemble, 3e personne ou 1re personne (**V** ; clic pour tourner à la souris).
+- **Guidage** : une flèche dorée, un faisceau, la surbrillance du poste et un chemin lumineux au sol montrent toujours la prochaine action, avec la consigne et la « fiche de poste » (**H** pour masquer).
 
 ### Le Moulage 3D
 
-Jeu solo en 3D : on fabrique trois pièces de plus en plus complexes (roue de wagonnet en fonte, carter de pompe en aluminium, bloc-cylindres en fonte). Pour chacune :
+Jeu solo en 3D : on fabrique trois pièces de plus en plus complexes (roue de wagonnet en fonte, carter de pompe en aluminium, bloc-cylindres en fonte), dans l'ordre de l'atelier :
 
-1. **Serrage du sable** : arrêter le curseur dans la zone verte (trop peu serré = gale, trop serré = soufflures).
-2. **Noyaux** : choisir le bon noyau dans le bac (des intrus s'y glissent), le tourner avec **R** et le poser dans sa portée.
-3. **Évents** : percer chaque noyau pour que ses gaz s'échappent (sinon soufflures de noyau).
-4. **Masselottes** : en poser au-dessus des points chauds (sinon retassure), sans en mettre partout (chacune coûte du métal).
-5. **Température** : surchauffe adaptée à l'alliage (trop froid = malvenue ou reprise, trop chaud = pénétration).
-6. **Coulée** : maintenir pour verser en gardant le débit dans le vert (trop fort = inclusions d'oxydes, interruption = reprise), relâcher quand c'est plein (sinon bavures).
-7. **Décochage et contrôle** : la chape se soulève, la pièce refroidit, chaque défaut est montré sur la pièce et expliqué ; pièce conforme, à retoucher ou rebut.
+1. **Verser le sable** dans le châssis autour du modèle (maintien) : au ras, dans la zone verte (trop peu = percée de moule).
+2. **Serrage du sable** : arrêter le curseur dans la zone verte (trop peu serré = gale, trop serré = soufflures).
+3. **Noyautage** : choisir la bonne boîte à noyaux, la remplir (maintien), puis sortir le noyau de l'étuve au bon moment (mal rempli ou pas assez étuvé = noyau cassé, trop étuvé = gaz de noyau).
+4. **Remmoulage** : poser les noyaux dans leur portée, tournés avec **R**, **dans le bon ordre** (chambre avant sortie, chemise d'eau avant cylindres ; sinon noyau déplacé).
+5. **Évents** : percer chaque noyau pour que ses gaz s'échappent (sinon soufflures de noyau).
+6. **Masselottes** : en poser au-dessus des points chauds (sinon retassure), sans en mettre partout (chacune coûte du métal).
+7. **Température** : surchauffe adaptée à l'alliage (trop froid = malvenue ou reprise, trop chaud = pénétration).
+8. **Coulée** : maintenir pour verser en gardant le débit dans le vert (trop fort = inclusions d'oxydes, interruption = reprise), relâcher quand c'est plein (sinon bavures).
+9. **Décochage et contrôle** : la chape se soulève, la pièce refroidit, chaque défaut est montré sur la pièce et expliqué ; pièce conforme, à retoucher ou rebut.
 
-100 points par pièce (moins 45 par défaut critique, 15 par défaut mineur), ×10. Ticket à 2 100 points.
+Toutes les actions se font aussi depuis le panneau (boutons des portées, évents et masselottes). 100 points par pièce (moins 45 par défaut critique, 15 par défaut mineur), ×10. Ticket à 2 100 points.
 
-### Usine 101
+### Usine 102
 
 Inspiré de *1 sur 8 milliards* : tu choisis seulement « forge » ou « fonderie ». Le pays et la ville sont tirés au sort en proportion de la production mondiale réelle (la Chine pèse environ la moitié des pièces de fonderie du monde). Le capital, l'effectif et la capacité sont tirés eux aussi. Le temps défile tout seul (6 s = 1 mois, accéléré jusqu'à x4) et des événements tombent : flambée de l'énergie, crise automobile, grève, norme environnementale, contrôle fiscal… La partie se termine par une faillite, une vente ou la retraite (67 ans ou 30 ans de gestion). Le score est la valeur créée pendant ta gestion.
 
@@ -151,15 +153,15 @@ Plateau **en relief 3D** (three.js, par défaut) : plateau épais avec bandes de
 
 ### Forge Fighters
 
-Quatre combattants : Marius le Fondeur (projectile de fonte), Brigitte la Forgeronne (marteau-pilon), Sacha le Mouleur (tempête de sable) et Nina l'Ébarbeuse (ruée à la meuleuse). Le premier à 2 manches gagne. Un coup spécial coûte de la « chaleur », qui monte quand on frappe ou qu'on encaisse.
+Bagarre de bonshommes-bâtons à 2 à 4 (robots en renfort en partie rapide) sur les passerelles d'une fonderie. Les corps sont des pantins désarticulés qui s'effondrent quand on est mis K.O. Des caisses d'armes tombent du pont roulant : masse de forgeron, riveteuse, lance thermique, tromblon à grenaille, boulet de fonte (explose). Tomber dans la fonte en bas de l'écran, c'est perdu ; au bout de 35 s la fonte monte. Le dernier debout gagne la manche, la carte change à chaque manche (halle de coulée avec son jet de fonte, pont roulant mobile, laminoir à rouleaux, parc à ferraille) ; le premier à 3 manches gagne.
 
 | Action | Clavier | Mobile |
 |---|---|---|
-| Bouger / sauter / s'accroupir | flèches (ou ZQSD / WASD) | ◀ ▲ ▼ ▶ |
-| Poing · pied · spécial | J · K · L | POING · PIED · SPÉ |
-| Garde | reculer (accroupi pour les coups bas) | ◀ ou ▶ à l'opposé de l'adversaire |
+| Bouger · sauter (double saut) · descendre d'une passerelle | ← → / Q D · ↑ / Z · ↓ / S | ◀ ▶ ▲ ▼ |
+| Frapper / tirer · garde · lancer l'arme | J ou Espace · K · L | FRAPPE · GARDE · LANCER |
+| Viser en haut / en bas | ↑ / ↓ | ▲ ▼ |
 
-↓ + poing = uppercut qui projette l'adversaire, ↓ + pied = balayette. Un coup qui touche peut s'annuler dans le suivant ; combos nommés : Martelage (J, J, K), Forge infernale (J, J, K, ↓ + K), Fauchage (↓ + K, ↓ + J), Coup de trempe (J, ↓ + J) et la signature de chaque personnage (J, K, L). Guide animé avec **📖 Guide des combos** (aussi avant de lancer la partie) ou **G**. La jauge d'énergie sert aux spéciaux (un tiers) et, pleine, à l'**attaque ultime** avec **I** (mobile : ULTI) : même mise en scène façon anime que dans Poing de Fonte 3D, 30 dégâts si elle touche.
+Les combos et l'attaque ultime restent dans Poing de Fonte 3D.
 
 ### Grand Prix de la Coulée
 
@@ -170,9 +172,9 @@ Course de karts en 3D façon « party kart » avec les six persos de la métallu
 - **Caisses à outils** sur la piste, avec des objets de la métallurgie (les derniers reçoivent les plus puissants) : lingot d'acier et flaque d'huile de trempe (posés derrière soi), boulet de fonte (tiré tout droit), poche de fonte guidée (file vers le kart devant), bouteille d'oxygène (turbo), tablier aluminisé (invincible et plus rapide), coupure de courant (ralentit tous les autres). **E** ou clic pour l'utiliser.
 - Mon kart est piloté dans le navigateur ; le serveur vérifie les positions, gère les objets, les collisions, le classement et les arrivées.
 
-### Escadrille 101
+### Escadrille 102
 
-Chacun pour soi pendant 3 minutes, ou jusqu'à 15 avions abattus. On réapparaît 3 secondes après avoir été abattu, protégé par un bouclier pendant 2 secondes. Flèches pour piloter, Espace pour tirer.
+Combat aérien en 3D au-dessus de la vallée des fonderies, chacun pour soi pendant 3 minutes ou jusqu'à 12 victoires. Vue **3e personne** derrière l'avion ou **cockpit** avec viseur tête haute (**V**). Pilotage arcade : ← → virer, ↑ / ↓ monter et piquer, **Maj** postcombustion, **C** freins. **Espace / J** canon, **K** missile : garder la cible dans le losange pour la verrouiller (« VERROUILLÉ »), sinon le missile part tout droit. **L** leurres pour décrocher un missile (alerte « MISSILE » et bips). Radar, marqueurs de cible, alertes « REMONTE ! » et sortie de zone. On réapparaît 3 secondes après avoir été abattu, protégé 2 secondes.
 
 ## Classement
 
@@ -187,12 +189,12 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 - `server.py` : API (tickets, pseudos, classement, quiz) et salons en ligne
 - `royale.py` : moteur du battle royale (carte 3D, physique, vérification des déplacements, armes, raretés, fonte, robots)
 - `tekken.py` : moteur du combat 3D (déplacements en 3D, hauteurs de coups, projections, jongles, robot)
-- `fighter.py` : moteur du jeu de combat 2D (coups, gardes, manches, robot)
-- `combos.py` : combos nommés des deux jeux de combat
-- `planes.py` : moteur du combat d'avions
+- `brawl.py` : Forge Fighters (bagarre sur plateformes, armes, manches, robots)
+- `combos.py` : combos nommés de Poing de Fonte 3D
+- `planes.py` : moteur du combat aérien 3D (vol, canon, missiles, leurres, robots)
 - `forgeopoly.py` : règles complètes du jeu de plateau (et robots qui achètent, construisent et négocient)
 - `kart.py` : Grand Prix en karts (circuits, objets, robots, classement)
-- `atelier.py` : l'Atelier de Coulée en coopération (postes, pont roulant, cubilot, dosage, apprentis robots)
+- `atelier.py` : l'Atelier de Coulée en coopération (ligne DISA, four à induction, petite / grande série, apprentis robots)
 - `quiz_data.py` : questions du quiz (la première réponse de chaque liste est la bonne)
 - `public/` : la borne
   - `index.html`, `style.css` : la borne et son écran
@@ -205,6 +207,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
   - `royale.js` : Coulée Royale en FPS / TPS (squelettes animés, arme en main, prédiction des déplacements)
   - `fx.js` : grand écran et transitions à ondulations
   - `tekken3d.js` : arène et personnages 3D (three.js chargé à la demande)
-  - `fighter.js`, `planes.js` : combat 2D et avions
+  - `brawl.js` : Forge Fighters (pantins désarticulés) ; `fighter.js` : personnages 2D des aperçus ; `planes.js` : combat aérien 3D
+  - `atelier.js` : l'Atelier de Coulée 3D (vues, guidage) ; `moulage.js` : le Moulage 3D
   - `galaxie.js` : Coulée Galactique (3D)
-  - `usine.js`, `usine-data.js` : Usine 101 et ses données réelles
+  - `usine.js`, `usine-data.js` : Usine 102 et ses données réelles

@@ -1,27 +1,9 @@
-/* Guide des combos (Forge Fighters 2D et Poing de Fonte 3D) et grande annonce quand un combo passe.
+/* Guide des combos (Poing de Fonte 3D) et grande annonce quand un combo passe.
    Les combos sont reconnus par le serveur (combos.py) ; ce fichier les montre et les met en scène. */
 'use strict';
 
 // demo : coups joués par l'animation du guide (noms des animations 2D de fighter.js)
 const COMBO_GUIDE = {
-  fighter: {
-    title: 'Forge Fighters',
-    keys: { P: 'J', K: 'K', S: 'L', D: '↓', U: '↑', F: '→', B: '←', ULT2: 'I' },
-    moves: [
-      ['Poing', ['P'], 'jab'], ['Pied', ['K'], 'kick'], ['Balayette', ['D', 'K'], 'low'], ['Uppercut', ['D', 'P'], 'upper'],
-      ['Coup sauté', ['U', 'P'], 'air'], ['Spécial (jauge de chaleur)', ['S'], 'S'], ['Garde', ['B'], null],
-    ],
-    combos: [
-      ['Martelage', [['P'], ['P'], ['K']], ['jab', 'jab', 'kick'], 'Le classique : deux directs et un pied.'],
-      ['Forge infernale', [['P'], ['P'], ['K'], ['D', 'K']], ['jab', 'jab', 'kick', 'low'], 'Martelage prolongé d\'une balayette.'],
-      ['Fauchage', [['D', 'K'], ['D', 'P']], ['low', 'upper'], 'Balayette puis uppercut qui envoie en l\'air.'],
-      ['Coup de trempe', [['P'], ['D', 'P']], ['jab', 'upper'], 'Direct puis uppercut.'],
-      ['SIG', [['P'], ['K'], ['S']], ['jab', 'kick', 'S'], 'Signature du personnage (jauge de chaleur pleine au tiers).'],
-    ],
-    signatures: { fondeur: 'Déluge de fonte', forgeronne: 'Écrasement du pilon', mouleur: 'Tempête de sable noir', ebarbeuse: 'Ébarbage total' },
-    specials: { fondeur: 'coulee', forgeronne: 'masse', mouleur: 'sable', ebarbeuse: 'meuleuse' },
-    roster: () => FIGHTERS, saveKey: 'char',
-  },
   tekken: {
     title: 'Poing de Fonte 3D',
     keys: { 1: 'U', 2: 'I', 3: 'J', 4: 'K', D: '↓', F: '→', B: '←', U: '↑', DF: '↘', ULT3: 'L' },

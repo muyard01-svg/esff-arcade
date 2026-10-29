@@ -1,6 +1,7 @@
-/* Le Moulage — jeu solo en 3D (three.js) : on fait son moule en sable, on place les noyaux, on perce les évents,
-   on pose les masselottes, on règle la température puis on coule. Au décochage, la pièce est contrôlée :
-   chaque défaut métallurgique est montré sur la pièce et expliqué. Trois pièces de plus en plus complexes. */
+/* Le Moulage — jeu solo en 3D (three.js), dans l'ordre de l'atelier : on verse le sable dans le châssis, on le serre,
+   on fabrique les noyaux (boîte à noyaux puis étuve), on les remmoule dans le bon ordre, on perce les évents, on pose
+   les masselottes, on règle la température puis on coule. Au décochage, la pièce est contrôlée : chaque défaut
+   métallurgique est montré sur la pièce et expliqué. Trois pièces de plus en plus complexes. */
 'use strict';
 
 /* ---------- les pièces : formes (en unités de scène), noyaux, points chauds, masselottes possibles ---------- */
@@ -13,7 +14,8 @@ const ML_PARTS = [
     name: 'Roue de wagonnet', alloy: 'fonte', ram: 0.9,
     prims: [{ t: 'cyl', x: 0, y: 6, z: 0, r: 42, h: 12 }, { t: 'cyl', x: 0, y: 15, z: 0, r: 15, h: 30 }],
     top: 30,
-    cores: [{ shape: 'cyl', r: 7, h: 34, axis: 'y', x: 0, y: 15, z: 0, label: 'Noyau d’alésage Ø14' }],
+    cores: [{ shape: 'cyl', r: 7, h: 34, axis: 'y', x: 0, y: 15, z: 0, label: 'Noyau d’alésage Ø14', ord: 1 }],
+    order: 'Un seul noyau : il se pose debout dans sa portée, au centre du moyeu.',
     decoys: [{ shape: 'box', w: 20, h: 10, d: 30, x: 0, y: 0, z: 0, label: 'Noyau-boîte 20×30' }],
     hot: [{ x: 0, y: 30, z: 0, name: 'moyeu épais' }],
     feeders: [{ x: 0, y: 30, z: 0 }, { x: 30, y: 12, z: 0 }, { x: -30, y: 12, z: 0 }, { x: 0, y: 12, z: 30 }],
@@ -24,8 +26,9 @@ const ML_PARTS = [
     prims: [{ t: 'box', x: 0, y: 17, z: 0, w: 80, h: 34, d: 56 }, { t: 'cyl', x: 55, y: 17, z: 0, r: 12, h: 30, axis: 'x' },
       { t: 'cyl', x: -30, y: 39, z: -18, r: 10, h: 10 }, { t: 'cyl', x: 30, y: 39, z: 18, r: 10, h: 10 }],
     top: 44,
-    cores: [{ shape: 'box', w: 60, h: 24, d: 38, x: 0, y: 17, z: 0, label: 'Noyau de chambre 60×38' },
-      { shape: 'cyl', r: 7, h: 40, axis: 'x', x: 52, y: 17, z: 0, label: 'Noyau de sortie Ø14' }],
+    cores: [{ shape: 'box', w: 60, h: 24, d: 38, x: 0, y: 17, z: 0, label: 'Noyau de chambre 60×38', ord: 1 },
+      { shape: 'cyl', r: 7, h: 40, axis: 'x', x: 52, y: 17, z: 0, label: 'Noyau de sortie Ø14', ord: 2 }],
+    order: 'Le noyau de sortie vient s’appuyer dans le noyau de chambre : la chambre d’abord, la sortie ensuite.',
     decoys: [{ shape: 'cyl', r: 10, h: 30, axis: 'y', x: 0, y: 0, z: 0, label: 'Noyau Ø20 droit' }],
     hot: [{ x: -30, y: 44, z: -18, name: 'bossage' }, { x: 30, y: 44, z: 18, name: 'bossage' }],
     feeders: [{ x: -30, y: 44, z: -18 }, { x: 30, y: 44, z: 18 }, { x: 0, y: 34, z: 0 }, { x: -28, y: 34, z: 18 }],
@@ -35,10 +38,11 @@ const ML_PARTS = [
     name: 'Bloc-cylindres', alloy: 'fonte', ram: 1.4,
     prims: [{ t: 'box', x: 0, y: 25, z: 0, w: 112, h: 50, d: 56 }, { t: 'box', x: -62, y: 30, z: 0, w: 14, h: 60, d: 60 }, { t: 'box', x: 62, y: 30, z: 0, w: 14, h: 60, d: 60 }],
     top: 60,
-    cores: [{ shape: 'cyl', r: 11, h: 54, axis: 'y', x: -36, y: 25, z: -4, label: 'Noyau de cylindre Ø22' },
-      { shape: 'cyl', r: 11, h: 54, axis: 'y', x: 0, y: 25, z: -4, label: 'Noyau de cylindre Ø22' },
-      { shape: 'cyl', r: 11, h: 54, axis: 'y', x: 36, y: 25, z: -4, label: 'Noyau de cylindre Ø22' },
-      { shape: 'box', w: 100, h: 30, d: 6, x: 0, y: 25, z: 22, label: 'Noyau de chemise d’eau 100×6' }],
+    cores: [{ shape: 'cyl', r: 11, h: 54, axis: 'y', x: -36, y: 25, z: -4, label: 'Noyau de cylindre Ø22', ord: 2 },
+      { shape: 'cyl', r: 11, h: 54, axis: 'y', x: 0, y: 25, z: -4, label: 'Noyau de cylindre Ø22', ord: 2 },
+      { shape: 'cyl', r: 11, h: 54, axis: 'y', x: 36, y: 25, z: -4, label: 'Noyau de cylindre Ø22', ord: 2 },
+      { shape: 'box', w: 100, h: 30, d: 6, x: 0, y: 25, z: 22, label: 'Noyau de chemise d’eau 100×6', ord: 1 }],
+    order: 'La chemise d’eau se glisse le long de la paroi : posée après les cylindres, elle ne passe plus. Chemise d’abord, cylindres ensuite.',
     decoys: [{ shape: 'box', w: 30, h: 30, d: 30, x: 0, y: 0, z: 0, label: 'Noyau cubique 30' }, { shape: 'cyl', r: 7, h: 40, axis: 'x', x: 0, y: 0, z: 0, label: 'Noyau Ø14 couché' }],
     hot: [{ x: -62, y: 60, z: 0, name: 'bride épaisse' }, { x: 62, y: 60, z: 0, name: 'bride épaisse' }],
     feeders: [{ x: -62, y: 60, z: 0 }, { x: 62, y: 60, z: 0 }, { x: -18, y: 50, z: -20 }, { x: 18, y: 50, z: 10 }, { x: -40, y: 50, z: 18 }],
@@ -56,12 +60,16 @@ const ML_DEFECTS = {
   inclusions: { name: 'Inclusions d’oxydes', crit: false, why: 'Coulée trop turbulente : de l’air et des oxydes ont été entraînés dans le métal.' },
   bavure: { name: 'Bavures', crit: false, why: 'On a continué à verser une fois le moule plein : le métal a débordé au plan de joint.' },
   manque: { name: 'Pièce incomplète', crit: true, why: 'Le moule n’a pas été rempli jusqu’au bout.' },
+  percee: { name: 'Percée de moule', crit: true, why: 'Pas assez de sable au-dessus du modèle : la paroi du moule était trop mince et le métal l’a traversée.' },
+  noyau_casse: { name: 'Noyau cassé', crit: true, why: 'Noyau mal rempli ou pas assez étuvé : friable, il s’est brisé sous la poussée du métal.' },
+  noyau_brule: { name: 'Gaz de noyau brûlé', crit: false, why: 'Noyau trop étuvé : son liant brûlé dégage beaucoup de gaz au contact du métal.' },
+  deplacement: { name: 'Noyau déplacé', crit: false, why: 'Mauvais ordre de remmoulage : un noyau a été forcé et s’est décalé, les parois de la pièce sont d’épaisseur inégale.' },
 };
 
 GAMES.push({
   id: 'moulage', title: 'Le Moulage 3D', teinte: 'acier', product: 'capuche',
-  pitch: 'Fais ton moule en sable, place les noyaux, perce les évents, pose les masselottes, règle la température et coule. Au décochage, chaque défaut métallurgique est montré sur la pièce : évite le rebut !',
-  how: 'Trois pièces : roue de wagonnet, carter de pompe en aluminium, bloc-cylindres. <b>Clic</b> sur les objets en 3D, <b>glisser</b> pour tourner autour du moule, <b>molette</b> pour zoomer. Serrage : <b>clic ou Espace</b> dans la zone verte. Noyaux : choisis-le à gauche, <b>R</b> pour le tourner, puis clique sa portée. Coulée : <b>maintiens</b> pour verser, garde le débit dans le vert et relâche quand c’est plein.',
+  pitch: 'Verse le sable dans le châssis, serre-le, fabrique tes noyaux, remmoule-les dans le bon ordre, perce les évents, pose les masselottes, règle la température et coule. Au décochage, chaque défaut métallurgique est montré sur la pièce : évite le rebut !',
+  how: 'Trois pièces : roue de wagonnet, carter de pompe en aluminium, bloc-cylindres. <b>Maintiens Espace</b> (ou le clic) pour verser le sable, remplir la boîte à noyaux et couler ; <b>Espace</b> dans la zone verte pour serrer et sortir le noyau de l’étuve. Les noyaux se posent depuis le panneau ou en cliquant leur portée bleue, <b>R</b> pour les tourner. <b>Glisser</b> pour tourner autour du moule, <b>molette</b> pour zoomer.',
   run: runMoulage,
 });
 
@@ -81,7 +89,7 @@ function moulage3d(stage, api) {
   hud.classList.add('tk-hud');
   const panel = document.createElement('div'); panel.className = 'ml-panel'; panel.dataset.overlay = '1'; screen.appendChild(panel);
   const hint = document.createElement('p'); hint.className = 'keys-hint';
-  hint.textContent = 'CLIC SUR LES OBJETS · GLISSER POUR TOURNER · MOLETTE ZOOM · R TOURNER LE NOYAU · ESPACE / MAINTIEN POUR SERRER ET COULER';
+  hint.textContent = 'ESPACE / MAINTIEN : VERSER, SERRER, REMPLIR, ÉTUVER, COULER · CLIC SUR LES OBJETS · GLISSER POUR TOURNER · MOLETTE ZOOM · R TOURNER LE NOYAU';
   wrap.appendChild(hint);
 
   /* ---------- scène ---------- */
@@ -126,7 +134,9 @@ function moulage3d(stage, api) {
   let step = '', stepT = 0;
   let group = null;                  // tout ce qui appartient à la pièce en cours (retiré à la suivante)
   let rams = [], ramPos = 0, ramDir = 1, rammer = null, ramAnim = 0;
-  let tray = [], selected = null, slots = [], sloppy = 0;
+  let tray = [], selected = null, slots = [], sloppy = 0, placedOrd = 0, misorder = false;
+  let sand = 0, sandHold = false, sandMesh = null, sandStream = null, hopper = null;
+  let made = [], mk = null;           // noyautage : noyaux fabriqués, noyau en cours { def, box, phase, fill, cure }
   let feederSpots = [], hotMarks = [], vents = [];
   let temp = 1300;
   let fill = 0, flow = 0, holding = false, turbulence = 0, gap = 0, started = false, overT = 0, interrupted = false, fullAt = 0;
@@ -149,7 +159,8 @@ function moulage3d(stage, api) {
     for (const h of hits) { let o = h.object; while (o && !o.userData.pick) o = o.parent; if (o) return o; }
     return null;
   };
-  hud.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; moved = 0; hud.setPointerCapture(e.pointerId); if (step === 'pour' || step === 'ram') press(true); });
+  const HOLD_STEPS = ['pour', 'ram', 'sand', 'coremake'];
+  hud.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; moved = 0; hud.setPointerCapture(e.pointerId); if (HOLD_STEPS.includes(step)) press(true); });
   hud.addEventListener('pointermove', e => {
     if (!drag) { const o = pick(e); hud.style.cursor = o ? 'pointer' : 'grab'; return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; moved += Math.abs(dx) + Math.abs(dy);
@@ -157,7 +168,7 @@ function moulage3d(stage, api) {
     drag = { x: e.clientX, y: e.clientY };
   });
   hud.addEventListener('pointerup', e => {
-    if (step === 'pour') press(false);
+    if (HOLD_STEPS.includes(step)) press(false);
     if (drag && moved < 6) { const o = pick(e); if (o) clickObj(o); }
     drag = null;
   });
@@ -172,6 +183,11 @@ function moulage3d(stage, api) {
   function press(down) {
     if (step === 'ram' && down) doRam();
     if (step === 'pour') { holding = down; if (down) started = true; }
+    if (step === 'sand') sandHold = down;
+    if (step === 'coremake' && mk) {
+      if (mk.phase === 'fill') mk.hold = down;
+      else if (mk.phase === 'cure' && down) unmould();
+    }
   }
 
   /* ---------- déroulé d'une pièce ---------- */
@@ -183,6 +199,8 @@ function moulage3d(stage, api) {
     group = new THREE.Group(); scene.add(group);
     pickables.length = 0;
     rams = []; ramPos = 0; ramDir = 1; tray = []; selected = null; slots = []; sloppy = 0; vents = []; feederSpots = []; hotMarks = [];
+    placedOrd = 0; misorder = false; sand = 0; sandHold = false; made = []; mk = null; cope = null; ladle = null; stream = null;
+    yaw = 0.6; pitch = 0.85; dist = 400; target.set(-70, 10, 40);
     temp = A().liquidus + 60; fill = 0; flow = 0; holding = false; turbulence = 0; gap = 0; started = false; overT = 0; interrupted = false; fullAt = 0;
     defects = []; markers = []; coolT = 0;
     api.info(`Pièce ${partIdx + 1}/${ML_PARTS.length} · ${part.name}`);
@@ -190,11 +208,16 @@ function moulage3d(stage, api) {
     const top = part.top;
     const frameM = M('#2f6b4a', { metalness: 0.5, roughness: 0.4 });
     [[0, -88, 196, 12], [0, 88, 196, 12], [-98, 0, 12, 176], [98, 0, 12, 176]].forEach(([x, z, w, d]) => { const f = new THREE.Mesh(new THREE.BoxGeometry(w, top + 30, d), frameM); f.position.set(x, (top + 30) / 2 - 28, z); group.add(f); });
-    const drag2 = new THREE.Mesh(new THREE.BoxGeometry(184, top + 26, 164), new THREE.MeshStandardMaterial({ map: sandTex, transparent: true, opacity: 0.42, depthWrite: false, roughness: 1 }));
-    drag2.position.y = (top + 26) / 2 - 26; group.add(drag2);
+    // le sable versé : un bloc qui monte dans le châssis, opaque pendant le versement, en coupe ensuite
+    sandMesh = new THREE.Mesh(new THREE.BoxGeometry(184, top + 26, 164), new THREE.MeshStandardMaterial({ map: sandTex, transparent: true, opacity: 0.95, depthWrite: false, roughness: 1 }));
+    sandMesh.position.y = -26; sandMesh.scale.y = 0.001; group.add(sandMesh);
+    hopper = new THREE.Group();
+    const hb = new THREE.Mesh(new THREE.CylinderGeometry(40, 12, 50, 16, 1, true), M('#5c6067', { metalness: 0.6, side: THREE.DoubleSide })); hopper.add(hb);
+    hopper.position.set(-20, top + 150, 10); group.add(hopper);
+    sandStream = new THREE.Mesh(new THREE.CylinderGeometry(9, 12, 1, 10), M('#c49a64', { roughness: 1 })); sandStream.visible = false; group.add(sandStream);
     // empreinte de la pièce (sombre) et métal (caché jusqu'à la coulée)
     const cav = new THREE.Group();
-    const cavMat = M('#1a120c', { roughness: 1 });
+    const cavMat = M('#1a120c', { roughness: 1, transparent: true, opacity: 0.55, depthWrite: false });   // translucide : on voit les portées
     part.prims.forEach(p => cav.add(primMesh(p, cavMat)));
     group.add(cav);
     metalPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -1);
@@ -206,12 +229,14 @@ function moulage3d(stage, api) {
     rammer = new THREE.Group();
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 120, 8), M('#7a5434')); shaft.position.y = 60; rammer.add(shaft);
     const foot = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 10, 16), M('#5c6067', { metalness: 0.7 })); rammer.add(foot);
-    rammer.position.set(-50, top + 60, 40); group.add(rammer);
-    goStep('ram');
+    rammer.position.set(-50, top + 60, 40); rammer.visible = false; group.add(rammer);
+    goStep('sand');
   }
 
   function goStep(s) {
     step = s; stepT = 0;
+    if (s === 'ram') { rammer.visible = true; hopper.visible = false; sandStream.visible = false; sandMesh.material.opacity = 0.42; }
+    if (s === 'coremake') setupCoreMaking();
     if (s === 'cores') setupCores();
     if (s === 'vents') setupVents();
     if (s === 'feeders') setupFeeders();
@@ -229,24 +254,64 @@ function moulage3d(stage, api) {
     const ok = ramPos >= 0.4 && ramPos <= 0.6;
     sfx(ok ? 140 : 90, 0.12, 'square', 0.06, -40);
     say(ok ? 'Bien serré !' : ramPos < 0.4 ? 'Pas assez serré' : 'Trop serré');
-    if (rams.length === 3) setTimeout(() => { rammer.visible = false; goStep('cores'); }, 700);
+    if (rams.length === 3) setTimeout(() => { rammer.visible = false; goStep('coremake'); }, 700);
     renderPanel();
   }
 
-  /* 2) noyaux : choisir dans le bac, tourner (R), cliquer la portée */
+  /* 0) verser le sable : remplir le châssis au ras (zone verte), sans en mettre partout */
+  function sandDone() {
+    if (sand < 0.5) { say('Verse au moins la moitié du châssis'); return; }
+    if (sand < 0.9) say('Pas assez de sable : le modèle est mal recouvert');
+    else if (sand > 1.08) { sloppy += 2; say('Trop de sable : ça déborde, il faut araser'); }
+    else say('Châssis rempli au ras, parfait');
+    goStep('ram');
+  }
+
+  /* 3) noyautage : choisir la bonne boîte à noyaux, la remplir (maintien), puis sortir le noyau de l'étuve au bon moment */
+  function setupCoreMaking() {
+    made = [];
+    nextCoreToMake();
+  }
+  function nextCoreToMake() {
+    const todo = part.cores.filter((c, i) => !made.some(m => m.i === i));
+    if (!todo.length) { mk = null; setTimeout(() => goStep('cores'), 500); renderPanel(); return; }
+    const c = todo[0];
+    const boxes = [c, ...part.decoys].map((d, k) => ({ d, k, ok: k === 0 })).sort(() => Math.random() - 0.5);
+    mk = { def: c, i: part.cores.indexOf(c), boxes, phase: 'box', fill: 0, cure: 0, hold: false };
+    say(`Fabrique : ${c.label}`);
+    renderPanel();
+  }
+  function chooseBox(b) {
+    if (!mk || mk.phase !== 'box') return;
+    if (!b.ok) { sloppy++; SFX.bad(); say('Cette boîte ne donne pas le noyau demandé'); return; }
+    mk.phase = 'fill'; SFX.tick(); say('Maintiens pour remplir la boîte de sable à noyau'); renderPanel();
+  }
+  function fillDone() {
+    if (!mk || mk.phase !== 'fill' || mk.fill < 0.3) return;
+    mk.phase = 'cure'; mk.cure = 0; mk.hold = false; say('À l’étuve ! Sors le noyau quand la jauge est dans le vert (Espace)'); renderPanel();
+  }
+  function unmould() {
+    if (!mk || mk.phase !== 'cure') return;
+    const q = mk.fill < 0.85 ? 'creux' : mk.cure < 0.55 ? 'friable' : mk.cure > 0.78 ? 'brule' : 'ok';
+    made.push({ i: mk.i, q });
+    say({ ok: 'Noyau parfait !', creux: 'Boîte mal remplie : noyau creux et fragile', friable: 'Pas assez étuvé : noyau friable', brule: 'Trop étuvé : liant brûlé' }[q]);
+    (q === 'ok' ? SFX.good : SFX.bad)();
+    nextCoreToMake();
+  }
+
+  /* 4) remmoulage : poser les noyaux fabriqués dans l'ordre, chacun dans sa portée */
   const coreKey = c => c.shape === 'box' ? `box${c.w}x${c.h}x${c.d}` : `cyl${c.r}x${c.h}`;
   const coreRot = c => c.shape === 'box' ? 0 : (c.axis === 'z' ? 90 : 0);
   const coreSym = c => (c.shape === 'cyl' && c.axis === 'y') || (c.shape === 'box' && c.w === c.d);
   function setupCores() {
-    const all = [...part.cores.map(c => ({ ...c })), ...part.decoys.map(c => ({ ...c, decoy: true }))];
-    tray = all.map((c, i) => ({ ...c, id: i, rot: c.decoy || coreSym(c) ? 0 : Math.random() < 0.5 ? 0 : 90, used: false })).sort(() => Math.random() - 0.5);
+    tray = made.map((m, k) => { const c = part.cores[m.i]; return { ...c, id: k, q: m.q, rot: coreSym(c) ? 0 : Math.random() < 0.5 ? 0 : 90, used: false }; }).sort(() => Math.random() - 0.5);
     slots = part.cores.map((c, i) => {
       const ghost = primMesh({ ...c, t: c.shape }, new THREE.MeshBasicMaterial({ color: '#7fd4ff', wireframe: true, transparent: true, opacity: 0.7 }));
       const grp = new THREE.Group(); grp.add(ghost); grp.userData = { pick: true, kind: 'slot', i };
       group.add(grp); pickables.push(grp);
       return { def: c, grp, filled: false, mesh: null };
     });
-    say('Choisis un noyau à gauche, puis clique sa portée (en bleu)');
+    say('Remmoulage : respecte l’ordre de pose');
   }
   function placeCore(slot) {
     if (!selected) { say('Choisis d’abord un noyau dans le bac'); return; }
@@ -257,7 +322,9 @@ function moulage3d(stage, api) {
     const want = coreRot(c);
     const have = selected.shape === 'cyl' ? (selected.rot === 90 ? 90 : 0) : selected.rot;
     if (!coreSym(c) && have !== want) { sloppy++; say('Mauvaise orientation : tourne-le avec R'); SFX.bad(); return; }
-    slot.filled = true; selected.used = true; selected = null;
+    const first = Math.min(...slots.filter(s => !s.filled).map(s => s.def.ord || 1));
+    if ((c.ord || 1) > first) { misorder = true; say('Mauvais ordre : ce noyau a été forcé et risque de se décaler'); SFX.bad(); }
+    slot.filled = true; slot.q = selected.q; selected.used = true; selected = null;
     slot.grp.visible = false;
     const m = primMesh({ ...c, t: c.shape }, coreMat); m.userData.baseY = c.y; m.userData.drop = true; m.position.y = c.y + 40; group.add(m); slot.mesh = m;
     sfx(520, 0.08, 'triangle', 0.05); SFX.good && SFX.good();
@@ -342,6 +409,14 @@ function moulage3d(stage, api) {
     const under = rams.filter(r => r < 0.4).length, over = rams.filter(r => r > 0.6).length;
     if (under >= 2) add('gale', new THREE.Vector3(-30, 8, 20));
     if (over >= 2) add('soufflure_sable', new THREE.Vector3(30, 8, -20));
+    // sable versé
+    if (sand < 0.9) add('percee', new THREE.Vector3(0, part.top, -30));
+    // qualité des noyaux et ordre de remmoulage
+    const badCore = slots.find(s => s.q === 'creux' || s.q === 'friable');
+    if (badCore) add('noyau_casse', new THREE.Vector3(badCore.def.x, badCore.def.y, badCore.def.z));
+    const burnt = slots.find(s => s.q === 'brule');
+    if (burnt) add('noyau_brule', new THREE.Vector3(burnt.def.x, burnt.def.y + 8, burnt.def.z));
+    if (misorder) add('deplacement', new THREE.Vector3(slots[slots.length - 1].def.x, slots[slots.length - 1].def.y, slots[slots.length - 1].def.z));
     // noyaux non ventilés
     const unvented = vents.filter(v => !v.done);
     if (unvented.length) add('soufflure_noyau', unvented[0].pos.clone());
@@ -373,38 +448,55 @@ function moulage3d(stage, api) {
   function clickObj(o) {
     const u = o.userData;
     if (step === 'cores' && u.kind === 'slot') placeCore(slots[u.i]);
+    else if (step === 'cores' && u.kind === 'core' && !slots[u.i].filled) placeCore(slots[u.i]);
     else if (step === 'vents' && u.kind === 'vent') drill(vents[u.i]);
     else if (step === 'feeders' && u.kind === 'feeder') toggleFeeder(feederSpots[u.i]);
   }
 
   /* ---------- panneau d'instructions ---------- */
   function renderPanel() {
-    const steps = ['ram', 'cores', 'vents', 'feeders', 'temp', 'pour', 'result'];
-    const names = ['Serrage', 'Noyaux', 'Évents', 'Masselottes', 'Température', 'Coulée', 'Contrôle'];
+    const steps = ['sand', 'ram', 'coremake', 'cores', 'vents', 'feeders', 'temp', 'pour', 'result'];
+    const names = ['Sable', 'Serrage', 'Noyautage', 'Remmoulage', 'Évents', 'Masselottes', 'Température', 'Coulée', 'Contrôle'];
     const prog = step === 'end' ? '' : `<ol class="ml-steps">${steps.map((s, i) => `<li class="${s === step || (s === 'pour' && step === 'close') ? 'on' : steps.indexOf(step) > i ? 'done' : ''}">${names[i]}</li>`).join('')}</ol>`;
     let body = '';
-    if (step === 'ram') body = `<h4>1 · Serrer le sable</h4><p>Tasse le sable autour du modèle : arrête le curseur dans la <b>zone verte</b> (clic ou Espace). Trop peu serré : le sable s'érode ; trop serré : les gaz ne passent plus.</p><p class="ml-big">${rams.length}/3 coups</p>`;
-    else if (step === 'cores') body = `<h4>2 · Placer les noyaux</h4><p>Les noyaux forment les creux de la pièce. Choisis-en un, <b>R</b> pour le tourner, puis clique sa portée bleue.</p>
-      <div class="ml-tray">${tray.map(c => `<button type="button" data-core="${c.id}" class="${selected && selected.id === c.id ? 'on' : ''}" ${c.used ? 'disabled' : ''}><i class="ml-ico ${c.shape} ${c.shape === 'cyl' ? (c.axis === 'y' ? 'up' : (c.rot === 90 ? 'z' : 'x')) : (c.rot === 90 ? 'z' : 'x')}"></i><span>${c.label}</span><small>${c.shape === 'cyl' && c.axis === 'y' ? 'debout' : c.rot === 90 ? 'orienté ↕' : 'orienté ↔'}</small></button>`).join('')}</div>
+    if (step === 'sand') body = `<h4>1 · Verser le sable</h4><p>Le modèle est posé dans le châssis. <b>Maintiens</b> (clic ou Espace) pour verser le sable de moulage : remplis jusqu'au ras du châssis (<b>zone verte</b>). Trop peu : la paroi du moule sera trop mince.</p><p class="ml-big">${Math.round(sand * 100)} %</p><button type="button" class="btn btn-hot" id="mlNext">Araser et continuer ▶</button>`;
+    else if (step === 'ram') body = `<h4>2 · Serrer le sable</h4><p>Tasse le sable autour du modèle : arrête le curseur dans la <b>zone verte</b> (clic ou Espace). Trop peu serré : le sable s'érode ; trop serré : les gaz ne passent plus.</p><p class="ml-big">${rams.length}/3 coups</p>`;
+    else if (step === 'coremake') {
+      const n = part.cores.length;
+      body = `<h4>3 · Fabriquer les noyaux</h4><p>Les noyaux forment les creux de la pièce. Pour chacun : choisis la <b>bonne boîte à noyaux</b>, <b>maintiens</b> pour la remplir de sable à noyau, puis passe-le à l'étuve et sors-le <b>dans le vert</b> (Espace).</p><p class="ml-big">${made.length}/${n} noyau${n > 1 ? 'x' : ''}</p>`
+        + (mk ? `<p><b>À fabriquer :</b> ${mk.def.label}</p>` + (mk.phase === 'box' ? `<div class="ml-tray">${mk.boxes.map((b, k) => `<button type="button" data-box="${k}"><i class="ml-ico ${b.d.shape} ${b.d.shape === 'cyl' ? (b.d.axis === 'y' ? 'up' : 'x') : 'x'}"></i><span>Boîte : ${b.d.label.replace(/^Noyau /, '')}</span></button>`).join('')}</div>`
+          : mk.phase === 'fill' ? `<p>Remplissage : ${Math.round(mk.fill * 100)} %</p><button type="button" class="btn btn-hot" id="mlFill">À l’étuve ▶</button>`
+          : `<button type="button" class="btn btn-hot" id="mlCure">Sortir de l’étuve (Espace)</button>`) : '');
+    }
+    else if (step === 'cores') body = `<h4>4 · Remmoulage</h4><p>Pose les noyaux dans leur portée, <b>dans le bon ordre</b> : ${part.order} Choisis un noyau, <b>R</b> pour le tourner, puis clique sa portée (ou son bouton).</p>
+      <div class="ml-tray">${slots.map((s, i) => `<button type="button" data-slot="${i}" ${s.filled ? 'disabled' : ''}><span>Portée ${String.fromCharCode(65 + i)} · ${s.def.label.replace(/^Noyau /, '')}</span><small>${s.filled ? 'posé' : 'libre'}</small></button>`).join('')}</div>
+      <div class="ml-tray">${tray.map(c => `<button type="button" data-core="${c.id}" class="${selected && selected.id === c.id ? 'on' : ''}" ${c.used ? 'disabled' : ''}><i class="ml-ico ${c.shape} ${c.shape === 'cyl' ? (c.axis === 'y' ? 'up' : (c.rot === 90 ? 'z' : 'x')) : (c.rot === 90 ? 'z' : 'x')}"></i><span>${c.label}${c.q && c.q !== 'ok' ? ' ⚠' : ''}</span><small>${c.shape === 'cyl' && c.axis === 'y' ? 'debout' : c.rot === 90 ? 'orienté ↕' : 'orienté ↔'}</small></button>`).join('')}</div>
       ${selected ? '<button type="button" class="btn btn-sm btn-ghost" id="mlRot">↻ Tourner (R)</button>' : ''}`;
-    else if (step === 'vents') body = `<h4>3 · Percer les évents</h4><p>En chauffant, le liant des noyaux dégage des gaz. Perce un évent dans chaque noyau (clique les anneaux jaunes).</p><p class="ml-big">${vents.filter(v => v.done).length}/${vents.length}</p><button type="button" class="btn btn-hot" id="mlNext">Continuer ▶</button>`;
-    else if (step === 'feeders') body = `<h4>4 · Poser les masselottes</h4><p>Les zones épaisses (<b style="color:#ff6a5a">points chauds</b>) refroidissent en dernier et se creusent. Une masselotte au-dessus les alimente en métal. Clique les anneaux pour en poser ; chacune coûte du métal.</p><p class="ml-big">${feederSpots.filter(s => s.on).length} masselotte(s)</p><button type="button" class="btn btn-hot" id="mlNext">Fermer le moule ▶</button>`;
-    else if (step === 'temp') { const a = A(); body = `<h4>5 · Température de coulée</h4><p><b>${a.name}</b> · liquidus ${a.liquidus} °C. On coule avec une surchauffe : trop froid, le métal se fige avant de tout remplir ; trop chaud, il brûle le sable.</p><label class="ml-temp"><input type="range" id="mlTemp" min="${a.liquidus}" max="${a.liquidus + 320}" step="5" value="${temp}"><b id="mlTempV">${temp} °C</b></label><button type="button" class="btn btn-hot" id="mlNext">Couler ▶</button>`; }
-    else if (step === 'pour' || step === 'close') body = `<h4>6 · Couler</h4><p><b>Maintiens</b> (clic ou Espace) pour verser. Garde le débit dans la <b>zone verte</b> : trop fort, ça tourbillonne ; une interruption fait une reprise. Relâche quand le métal monte dans les masselottes.</p>`;
+    else if (step === 'vents') body = `<h4>5 · Poser les évents</h4><p>En chauffant, le liant des noyaux dégage des gaz. Perce un évent dans chaque noyau (clique les anneaux jaunes ou les boutons).</p><div class="ml-tray">${vents.map((v, i) => `<button type="button" data-vent="${i}" ${v.done ? 'disabled' : ''}><span>Évent du noyau ${String.fromCharCode(65 + i)}</span><small>${v.done ? 'percé' : 'à percer'}</small></button>`).join('')}</div><p class="ml-big">${vents.filter(v => v.done).length}/${vents.length}</p><button type="button" class="btn btn-hot" id="mlNext">Continuer ▶</button>`;
+    else if (step === 'feeders') body = `<h4>6 · Poser les masselottes</h4><p>Les zones épaisses (<b style="color:#ff6a5a">points chauds</b>) refroidissent en dernier et se creusent. Une masselotte au-dessus les alimente en métal. Clique les anneaux pour en poser ; chacune coûte du métal.</p><div class="ml-tray">${feederSpots.map((f, i) => `<button type="button" data-feeder="${i}" class="${f.on ? 'on' : ''}"><span>Emplacement ${i + 1}${part.hot.some(h => Math.hypot(h.x - f.f.x, h.z - f.f.z) < 6) ? ' · point chaud' : ''}</span><small>${f.on ? 'masselotte posée' : 'vide'}</small></button>`).join('')}</div><button type="button" class="btn btn-hot" id="mlNext">Fermer le moule ▶</button>`;
+    else if (step === 'temp') { const a = A(); body = `<h4>7 · Température de coulée</h4><p><b>${a.name}</b> · liquidus ${a.liquidus} °C. On coule avec une surchauffe : trop froid, le métal se fige avant de tout remplir ; trop chaud, il brûle le sable.</p><label class="ml-temp"><input type="range" id="mlTemp" min="${a.liquidus}" max="${a.liquidus + 320}" step="5" value="${temp}"><b id="mlTempV">${temp} °C</b></label><button type="button" class="btn btn-hot" id="mlNext">Couler ▶</button>`; }
+    else if (step === 'pour' || step === 'close') body = `<h4>8 · Couler</h4><p><b>Maintiens</b> (clic ou Espace) pour verser. Garde le débit dans la <b>zone verte</b> : trop fort, ça tourbillonne ; une interruption fait une reprise. Relâche quand le métal monte dans les masselottes.</p>`;
     else if (step === 'result') {
       const rebut = defects.some(d => ML_DEFECTS[d.k].crit);
-      body = `<h4>7 · Décochage et contrôle</h4><p class="ml-verdict ${rebut ? 'bad' : defects.length ? 'mid' : 'good'}">${rebut ? 'REBUT' : defects.length ? 'PIÈCE À RETOUCHER' : 'PIÈCE CONFORME'} · ${partScore}/100</p>
+      body = `<h4>9 · Décochage et contrôle</h4><p class="ml-verdict ${rebut ? 'bad' : defects.length ? 'mid' : 'good'}">${rebut ? 'REBUT' : defects.length ? 'PIÈCE À RETOUCHER' : 'PIÈCE CONFORME'} · ${partScore}/100</p>
         ${defects.length ? `<ul class="ml-defects">${defects.map(d => `<li class="${ML_DEFECTS[d.k].crit ? 'crit' : ''}"><b>${ML_DEFECTS[d.k].name}</b>${ML_DEFECTS[d.k].crit ? ' · critique' : ''}<small>${ML_DEFECTS[d.k].why}</small></li>`).join('')}</ul>` : '<p>Aucun défaut : bravo, la pièce part à l’usinage.</p>'}
         <button type="button" class="btn btn-hot" id="mlNext">${partIdx + 1 < ML_PARTS.length ? 'Pièce suivante ▶' : 'Terminer ▶'}</button>`;
     } else if (step === 'end') body = `<h4>Fin de la série</h4><p class="ml-big">${total} points</p>`;
     panel.innerHTML = `<div class="ml-card"><span class="ml-part">${part ? `Pièce ${partIdx + 1}/${ML_PARTS.length} · ${part.name}` : ''}</span>${prog}${body}</div>`;
     panel.querySelectorAll('[data-core]').forEach(b => b.addEventListener('click', () => { selected = tray.find(c => c.id === +b.dataset.core); SFX.tick(); renderPanel(); }));
+    panel.querySelectorAll('[data-slot]').forEach(b => b.addEventListener('click', () => placeCore(slots[+b.dataset.slot])));
+    panel.querySelectorAll('[data-vent]').forEach(b => b.addEventListener('click', () => drill(vents[+b.dataset.vent])));
+    panel.querySelectorAll('[data-feeder]').forEach(b => b.addEventListener('click', () => toggleFeeder(feederSpots[+b.dataset.feeder])));
+    panel.querySelectorAll('[data-box]').forEach(b => b.addEventListener('click', () => chooseBox(mk.boxes[+b.dataset.box])));
+    const fb = panel.querySelector('#mlFill'); if (fb) fb.addEventListener('click', fillDone);
+    const cb = panel.querySelector('#mlCure'); if (cb) cb.addEventListener('click', unmould);
     const rot = panel.querySelector('#mlRot'); if (rot) rot.addEventListener('click', () => { selected.rot = (selected.rot + 90) % 180; renderPanel(); SFX.tick(); });
     const tr = panel.querySelector('#mlTemp'); if (tr) tr.addEventListener('input', () => { temp = +tr.value; panel.querySelector('#mlTempV').textContent = `${temp} °C`; });
     const nx = panel.querySelector('#mlNext');
     if (nx) nx.addEventListener('click', () => {
       SFX.tick();
-      if (step === 'vents') goStep('feeders');
+      if (step === 'sand') sandDone();
+      else if (step === 'vents') goStep('feeders');
       else if (step === 'feeders') { goStep('close'); setTimeout(() => goStep('temp'), 900); }
       else if (step === 'temp') goStep('pour');
       else if (step === 'result') nextPart();
@@ -425,6 +517,17 @@ function moulage3d(stage, api) {
       g.font = '400 9px "Press Start 2P", monospace'; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText('SERRAGE : CLIC DANS LE VERT', gx, H - 58);
       rams.forEach((r, i) => { g.fillStyle = r >= 0.4 && r <= 0.6 ? '#7FD48A' : '#ff6a5a'; g.fillRect(gx + gw * r - 1, H - 34, 3, 8); });
     }
+    const gauge = (label, k, lo, hi, col) => {
+      g.fillStyle = 'rgba(8,9,11,.8)'; g.fillRect(gx - 10, H - 70, gw + 20, 50);
+      g.fillStyle = '#22262a'; g.fillRect(gx, H - 50, gw, 16);
+      g.fillStyle = 'rgba(46,158,91,.7)'; g.fillRect(gx + gw * lo, H - 50, gw * (hi - lo), 16);
+      g.fillStyle = col; g.fillRect(gx, H - 46, gw * Math.min(1, k), 8);
+      g.fillStyle = '#fff'; g.fillRect(gx + gw * Math.min(1, k) - 2, H - 56, 4, 28);
+      g.font = '400 9px "Press Start 2P", monospace'; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(label, gx, H - 58);
+    };
+    if (step === 'sand') gauge('SABLE : MAINTIENS, ARRÊTE DANS LE VERT', sand / 1.2, 0.9 / 1.2, 1.08 / 1.2, '#c49a64');
+    if (step === 'coremake' && mk && mk.phase === 'fill') gauge('BOÎTE À NOYAU : MAINTIENS POUR REMPLIR', mk.fill, 0.85, 1, '#e2d2a8');
+    if (step === 'coremake' && mk && mk.phase === 'cure') gauge('ÉTUVE : ESPACE DANS LE VERT', mk.cure, 0.55, 0.78, mk.cure > 0.78 ? '#5a3a1a' : '#ffb347');
     if (step === 'feeders') part.hot.forEach(h => { const s = project(new THREE.Vector3(h.x, h.y + 14, h.z)); if (s) { g.font = '800 12px Archivo, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ff8a7a'; g.fillText(`POINT CHAUD · ${h.name}`, s[0], s[1]); } });
     if (step === 'pour') {
       g.fillStyle = 'rgba(8,9,11,.8)'; g.fillRect(gx - 10, H - 110, gw + 20, 90);
@@ -454,6 +557,19 @@ function moulage3d(stage, api) {
     stepT += dt;
     const cw = hud.clientWidth, ch = hud.clientHeight;
     if (cw && (cw !== lastW || ch !== lastH)) { lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'; cam.aspect = cw / ch; cam.updateProjectionMatrix(); }
+    if (step === 'sand') {
+      if (sandHold) sand = Math.min(1.25, sand + dt * 0.32);
+      sandMesh.scale.y = Math.max(0.001, Math.min(1.1, sand));
+      sandMesh.position.y = -26 + (part.top + 26) * sandMesh.scale.y / 2;
+      sandStream.visible = sandHold;
+      if (sandHold) { const topY = hopper.position.y - 25, botY = -26 + (part.top + 26) * sandMesh.scale.y; sandStream.scale.y = Math.max(1, topY - botY); sandStream.position.set(hopper.position.x, (topY + botY) / 2, hopper.position.z); if (Math.random() < 0.25) sfx(60 + Math.random() * 40, 0.05, 'triangle', 0.012); }
+      if (Math.floor(stepT * 4) !== Math.floor((stepT - dt) * 4)) renderPanel();
+    }
+    if (step === 'coremake' && mk) {
+      if (mk.phase === 'fill' && mk.hold) mk.fill = Math.min(1.05, mk.fill + dt * 0.45);
+      if (mk.phase === 'cure') mk.cure = Math.min(1, mk.cure + dt * 0.22);
+      if (mk.phase === 'fill' && Math.floor(stepT * 4) !== Math.floor((stepT - dt) * 4)) renderPanel();
+    }
     if (step === 'ram' && rams.length < 3) {
       ramPos += ramDir * dt * (0.9 + rams.length * 0.25) * part.ram;
       if (ramPos > 1) { ramPos = 1; ramDir = -1; } if (ramPos < 0) { ramPos = 0; ramDir = 1; }

@@ -1,4 +1,4 @@
-/* Usine 101 — gère ta forge ou ta fonderie, façon « 1 sur 8 milliards » :
+/* Usine 102 — gère ta forge ou ta fonderie, façon « 1 sur 8 milliards » :
    tu choisis seulement le métier, le hasard (pondéré par la production mondiale réelle) choisit
    le pays, la ville et ton capital. Le temps passe tout seul, les événements tombent. */
 'use strict';
@@ -238,7 +238,7 @@ function runUsine(stage, api) {
   /* --- écran 1 : choix du métier --- */
   function choose() {
     stage.innerHTML = `<div class="screen usine-start">
-      <h4>Usine 101</h4>
+      <h4>Usine 102</h4>
       <p>Comme dans <em>1 sur 8 milliards</em>, tu ne choisis presque rien : seulement ton métier. Le pays, la ville et ton capital seront tirés au sort selon la vraie répartition mondiale de la production.</p>
       <div class="usine-pick">
         <button class="usine-type" data-t="fonderie"><b>🔥 Fonderie</b><span>Tu fonds le métal et tu le coules dans des moules.</span></button>
@@ -524,7 +524,7 @@ function runUsine(stage, api) {
 }
 
 GAMES.push({
-  id: 'usine', title: 'Usine 101', teinte: 'laiton', product: 'capuche',
+  id: 'usine', title: 'Usine 102', teinte: 'laiton', product: 'capuche',
   pitch: 'Reprends une forge ou une fonderie quelque part dans le monde et fais-la tourner jusqu\'à la retraite. Prix, salaires et énergie réels.',
   how: 'Choisis <b>forge</b> ou <b>fonderie</b>, le hasard fait le reste. Le temps défile tout seul : gère prix, équipe, entretien, dettes et investissements. Tiens <b>5 ans</b> sans faillite pour gagner un ticket.',
   run: runUsine,

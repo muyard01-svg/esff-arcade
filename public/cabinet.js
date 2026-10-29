@@ -1,4 +1,4 @@
-/* Arcade 101 — la borne : menu de sélection, pupitre, pseudo, classement, tickets */
+/* Arcade 102 — la borne : menu de sélection, pupitre, pseudo, classement, tickets */
 'use strict';
 
 const SOLO_ORDER = ['galaxie', 'usine', 'moulage', 'quiz', 'coulee', 'enclume', 'teintes', 'poche'];
@@ -72,7 +72,7 @@ function renderPreview() {
       <div class="pv-meta">${ruleFor(it)}${best ? `<span class="rec">Record : ${best}${it.id === 'quiz' ? '/10' : it.id === 'usine' ? ' k€ créés' : ''}</span>` : ''}</div>
       <div class="pv-go"><button class="btn btn-hot" id="pvGo">${it.kind === 'panel' ? 'Ouvrir' : 'Jouer'} ▶</button>
       ${it.kind !== 'panel' ? '<button class="btn btn-ghost" id="pvScores">Classement</button>' : ''}
-      ${it.id === 'fighter' || it.id === 'tekken' ? '<button class="btn btn-ghost" id="pvCombos">📖 Combos et ultimes</button>' : ''}</div>
+      ${it.id === 'tekken' ? '<button class="btn btn-ghost" id="pvCombos">📖 Combos et ultimes</button>' : ''}</div>
     </div>`;
   $('#pvGo').addEventListener('click', () => launch(it));
   const sc = $('#pvScores'); if (sc) sc.addEventListener('click', () => openPanel('scores', it.id));
@@ -85,23 +85,11 @@ function paintArt(box, it) {
   if (it.id === 'fighter') {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
     const g = cv.getContext('2d');
-    const seq = ['jab', 'kick', 'upper', 'low', 'coulee', 'masse', 'sable', 'meuleuse'];
-    const chars = Object.keys(FIGHTERS);
     return loop((dt, t) => {
-      const s = t / 1000;
       g.clearRect(0, 0, 640, 300);
       const glow = g.createRadialGradient(320, 300, 10, 320, 300, 300); glow.addColorStop(0, 'rgba(236,100,30,.45)'); glow.addColorStop(1, 'rgba(236,100,30,0)');
       g.fillStyle = glow; g.fillRect(0, 0, 640, 300);
-      const round = Math.floor(s / 1.1), ph = (s % 1.1) / 1.1;
-      const a = chars[Math.floor(s / 4.4) % 4], b = chars[(Math.floor(s / 4.4) + 2) % 4];
-      const attacker = round % 2;
-      const mv = seq[round % seq.length];
-      const fa = { ch: a, fc: 1, y: 0, st: attacker === 0 ? 'attack' : (ph > 0.4 && ph < 0.7 ? 'hit' : 'idle'), mv, p: ph };
-      const fb = { ch: b, fc: -1, y: 0, st: attacker === 1 ? 'attack' : (ph > 0.4 && ph < 0.7 ? 'hit' : 'idle'), mv, p: ph };
-      drawFighter(g, fa, 230, 285, 1.05, s);
-      drawFighter(g, fb, 410, 285, 1.05, s + 1);
-      g.font = '400 14px "Press Start 2P", monospace'; g.textAlign = 'center'; g.fillStyle = '#F5B700';
-      g.fillText(`${FIGHTERS[a].name.toUpperCase()}  VS  ${FIGHTERS[b].name.toUpperCase()}`, 320, 62);
+      brawlAttract(g, t / 1000, 640, 300);
     });
   }
   if (it.id === 'royale') {

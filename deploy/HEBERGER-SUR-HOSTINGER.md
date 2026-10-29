@@ -1,4 +1,4 @@
-# Mettre Arcade 101 en ligne sur Hostinger
+# Mettre Arcade 102 en ligne sur Hostinger
 
 Objectif : la borne accessible sur **https://arcade.esff2027.shop**, avec un bouton « Jouer » sur la boutique.
 
@@ -48,7 +48,7 @@ bash /root/install-hostinger-vps.sh arcade.esff2027.shop 'TON-CODE-PROMO' ton-em
 - Garde les **apostrophes** autour du code promo (à cause du `<`).
 - L'e-mail sert uniquement au certificat HTTPS gratuit.
 
-Après 2 à 3 minutes, le script affiche : **Arcade 101 est en ligne : https://arcade.esff2027.shop**
+Après 2 à 3 minutes, le script affiche : **Arcade 102 est en ligne : https://arcade.esff2027.shop**
 
 ## 5. Ajouter le lien sur la boutique (toi, dans le Website Builder)
 

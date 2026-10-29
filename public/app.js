@@ -1,4 +1,4 @@
-/* Arcade 101 — mini-jeux de la 101e promotion de l'ESFF */
+/* Arcade 102 — mini-jeux de la 102e promotion de l'ESFF */
 'use strict';
 
 /* ================= Données marque ================= */
@@ -416,7 +416,7 @@ function runCoulee(stage, api) {
 function runEnclume(stage, api) {
   const W = 360, H = 520;
   const { c, g } = makeCanvas(stage, W, H);
-  const word = (save.pseudo || 'ESFF101').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'ESFF101';
+  const word = (save.pseudo || 'ESFF102').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'ESFF102';
   let pos = 0, dir = 1, speed = 0.75, zoneC = 0.5, zoneW = 0.24, lives = 3, combo = 0, idx = 0, words = 0, score = 0;
   let hammer = 0, msg = '', msgT = 0, msgColor = '#fff', shake = 0, over = false, overT = 0;
   const parts = [];
@@ -557,7 +557,7 @@ function runTeintes(stage, api) {
     b.className = 'memo-card';
     b.setAttribute('aria-label', 'Carte retournée');
     const te = TEINTES[card.t];
-    b.innerHTML = `<div class="memo-inner"><div class="memo-face memo-back">101</div><div class="memo-face memo-front">${sweatSVG(card.m, te.hex)}<span>${models[card.m]}<br>${te.name}</span></div></div>`;
+    b.innerHTML = `<div class="memo-inner"><div class="memo-face memo-back">102</div><div class="memo-face memo-front">${sweatSVG(card.m, te.hex)}<span>${models[card.m]}<br>${te.name}</span></div></div>`;
     b.addEventListener('click', () => {
       if (lock || done || b.classList.contains('flip') || b.classList.contains('ok')) return;
       if (!start) { start = performance.now(); timerId = setInterval(updateStatus, 500); }
@@ -735,7 +735,7 @@ function runQuiz(stage, api) {
   const answers = [];
   stage.innerHTML = '<div class="screen"><p>Chargement des questions…</p></div>';
   fetch('/api/quiz').then(r => r.json()).then(d => { if (alive) { qs = d.questions; ask(0); } })
-    .catch(() => { if (alive) stage.innerHTML = '<div class="screen"><h4>Serveur requis</h4><p>Le quiz a besoin du serveur Arcade 101 (python server.py).</p></div>'; });
+    .catch(() => { if (alive) stage.innerHTML = '<div class="screen"><h4>Serveur requis</h4><p>Le quiz a besoin du serveur Arcade 102 (python server.py).</p></div>'; });
 
   function ask(i) {
     if (i >= qs.length) return submit();
@@ -844,7 +844,7 @@ function showIntro() {
     <p>${current.pitch}</p>
     <div class="how">${current.how}</div>
     <div class="ticket-box">${ticketRule(current)}</div>
-    ${current.ask === 'pseudo' ? `<label for="pseudoIn">Ton surnom à forger (comme celui brodé dans le dos)</label><input id="pseudoIn" maxlength="10" placeholder="ESFF101" value="${esc(save.pseudo || '')}">` : ''}
+    ${current.ask === 'pseudo' ? `<label for="pseudoIn">Ton surnom à forger (comme celui brodé dans le dos)</label><input id="pseudoIn" maxlength="10" placeholder="ESFF102" value="${esc(save.pseudo || '')}">` : ''}
     ${best ? `<span class="chip">Ton record : <b>${best}</b></span>` : ''}
     <button class="btn btn-hot" id="goBtn">C'est parti</button>`;
   stage.appendChild(s);

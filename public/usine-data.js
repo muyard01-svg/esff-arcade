@@ -1,4 +1,4 @@
-/* Usine 101 — données réelles (ou estimées à partir de sources réelles) utilisées par le jeu de gestion.
+/* Usine 102 — données réelles (ou estimées à partir de sources réelles) utilisées par le jeu de gestion.
    Chaque valeur « est. » est une estimation calibrée sur les sources listées dans USINE_SOURCES.
    Monnaie de calcul : euro. Taux de change indicatifs, octobre 2026. */
 'use strict';

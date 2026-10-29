@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installe Arcade 101 sur un VPS Hostinger (Ubuntu 22.04 ou 24.04), derrière nginx avec HTTPS.
+# Installe Arcade 102 sur un VPS Hostinger (Ubuntu 22.04 ou 24.04), derrière nginx avec HTTPS.
 #
 # Utilisation (en root sur le VPS, dans le dossier où se trouve esff-arcade.zip) :
 #   bash install-hostinger-vps.sh arcade.esff2027.shop 'TON-CODE-PROMO' ton-email@exemple.com
@@ -40,7 +40,7 @@ chown -R arcade:arcade "$APP_DIR" "$DATA_DIR"
 echo "==> Service systemd (redémarre tout seul)"
 cat > /etc/systemd/system/esff-arcade.service <<UNIT
 [Unit]
-Description=Arcade 101 - borne de la promo ESFF
+Description=Arcade 102 - borne de la promo ESFF
 After=network.target
 
 [Service]
@@ -97,5 +97,5 @@ echo "==> Certificat HTTPS"
 certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
 
 echo
-echo "Arcade 101 est en ligne : https://$DOMAIN"
+echo "Arcade 102 est en ligne : https://$DOMAIN"
 echo "Journal du serveur : journalctl -u esff-arcade -f"

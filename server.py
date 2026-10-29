@@ -1,4 +1,4 @@
-"""Arcade 101 — serveur des mini-jeux de la 101e promotion de l'ESFF.
+"""Arcade 102 — serveur des mini-jeux de la 102e promotion de l'ESFF.
 
 Sert le site, distribue les tickets à gratter, tire les codes promo au sort et héberge
 les salons en ligne (Forgeopoly, Grand Prix). Lancement : python server.py
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from aiohttp import web, WSMsgType
 
-from fighter import Fight
+from brawl import Brawl
 from forgeopoly import Forgeopoly
 from planes import Dogfight
 from kart import Kart
@@ -46,12 +46,12 @@ DAILY = {'coulee': 1, 'moulage': 1, 'enclume': 1, 'teintes': 1, 'poche': 1, 'qui
          'royale': 2, 'tekken': 2, 'fighter': 2, 'planes': 2, 'forgeopoly': 2, 'course': 2, 'atelier': 2}
 # Score minimum pour gagner un ticket dans les jeux solo
 SOLO_THRESHOLDS = {'coulee': 350, 'moulage': 2100, 'enclume': 250, 'teintes': 350, 'poche': 400, 'galaxie': 20000, 'usine': 0}
-USINE_MONTHS = 60          # Usine 101 : 5 ans de gestion sans faillite = 1 ticket
+USINE_MONTHS = 60          # Usine 102 : 5 ans de gestion sans faillite = 1 ticket
 QUIZ_LEN = 10
 QUIZ_PASS = 7
 IP_DAILY_CAP = 25
 
-GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Fight, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart, 'atelier': Atelier}
+GAME_TYPES = {'royale': Royale, 'tekken': Tournament, 'fighter': Brawl, 'planes': Dogfight, 'forgeopoly': Forgeopoly, 'course': Kart, 'atelier': Atelier}
 SOLO_GAMES = ['galaxie', 'usine', 'moulage', 'coulee', 'enclume', 'teintes', 'poche', 'quiz']
 ROOMS: dict[str, 'Room'] = {}
 TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{16,40}$')
@@ -172,7 +172,7 @@ async def api_score(request):
         score = 0
     record_score(player, game, score)
     need = SOLO_THRESHOLDS[game]
-    if game == 'usine':  # Usine 101 : le ticket se gagne à la durée de survie, le score sert au classement
+    if game == 'usine':  # Usine 102 : le ticket se gagne à la durée de survie, le score sert au classement
         try:
             months = int(data.get('months', 0))
         except (TypeError, ValueError):
@@ -536,5 +536,5 @@ def build_app():
 
 
 if __name__ == '__main__':
-    print(f'Arcade 101 sur http://localhost:{PORT}  (code promo distribué : {PROMO_CODE}, gain {int(WIN_RATE * 100)} %)')
+    print(f'Arcade 102 sur http://localhost:{PORT}  (code promo distribué : {PROMO_CODE}, gain {int(WIN_RATE * 100)} %)')
     web.run_app(build_app(), port=PORT, print=None)

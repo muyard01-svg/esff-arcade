@@ -1,16 +1,16 @@
-/* Arcade 101 — jeux en ligne : salons et résultats ; chaque jeu (Forgeopoly, Grand Prix, combats, avions…) a son fichier */
+/* Arcade 102 — jeux en ligne : salons et résultats ; chaque jeu (Forgeopoly, Grand Prix, combats, avions…) a son fichier */
 'use strict';
 
 const ONLINE = [
   {
-    id: 'fighter', title: 'Forge Fighters', tone: '#BA2C3A', label: 'Combat · 1 contre 1', tag: 'COMBAT 1V1',
-    pitch: "Le tournoi de baston de la fonderie. Quatre fondeurs, des combos, des coups spéciaux à la louche et au marteau-pilon.",
-    how: '<b>← →</b> bouger · <b>↑</b> sauter · <b>↓</b> s\'accroupir · <b>J</b> poing · <b>K</b> pied · <b>L</b> spécial. Reculer = garde.',
+    id: 'fighter', title: 'Forge Fighters', tone: '#BA2C3A', label: 'Bagarre · 2 à 4 joueurs', tag: 'BAGARRE 2-4',
+    pitch: "Bagarre de bonshommes-bâtons sur les passerelles de la fonderie. Des armes tombent du pont roulant (masse, riveteuse, lance thermique, tromblon, boulet de fonte), la fonte bouillonne en bas : le dernier debout gagne la manche, le premier à 3 manches gagne.",
+    how: '<b>← → / Q D</b> bouger · <b>↑ / Z</b> sauter (double saut) · <b>↓ / S</b> descendre d\'une passerelle · <b>J / Espace</b> frapper, tirer · <b>K</b> garde · <b>L</b> lancer l\'arme · <b>↑ ↓</b> viser.',
   },
   {
-    id: 'planes', title: 'Escadrille 101', tone: '#5AA8FF', label: 'Avions · 4 à 8 pilotes', tag: 'AVIONS 4-8',
-    pitch: "Combat aérien au-dessus des cheminées de l'usine. Chacun pour soi : abats le plus d'avions en 3 minutes.",
-    how: '<b>← →</b> virer · <b>↑</b> accélérer · <b>↓</b> ralentir · <b>Espace</b> ou <b>J</b> tirer.',
+    id: 'planes', title: 'Escadrille 102', tone: '#5AA8FF', label: 'Combat aérien 3D · 4 à 8 pilotes', tag: 'AVIONS 3D',
+    pitch: "Combat aérien en 3D au-dessus de la vallée des fonderies : canon, missiles à verrouillage, leurres, postcombustion. Vue à la 3e personne ou dans le cockpit. Chacun pour soi : le premier à 12 victoires gagne.",
+    how: '<b>← → / Q D</b> virer · <b>↑ / Z</b> monter · <b>↓ / S</b> piquer · <b>Maj</b> postcombustion · <b>C</b> freins · <b>Espace / J</b> canon · <b>K</b> missile (garde la cible dans le losange pour la verrouiller) · <b>L</b> leurres · <b>V</b> vue 3e personne / cockpit.',
   },
   {
     id: 'course', title: 'Grand Prix de la Coulée', tone: '#EC641E', label: 'Kart · 2 à 8 pilotes', tag: 'KART 2-8',
@@ -29,7 +29,6 @@ let onlineKind = null, room = null, mySeat = -1, isHost = false, view = null, tr
 let lastReward = null, quickStart = false;
 const HANDLERS = {
   forgeopoly: () => renderForgeo(),
-  fighter: () => updateFighter(),
   planes: () => updatePlanes(),
 };
 function stopClients() {
@@ -104,7 +103,7 @@ function renderLobbyForm(o, code = '') {
   $('#hudInfo').textContent = '';
   const fighterPick = o.id === 'course' ? `<label>Choisis ton pilote</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p><label>Circuit</label><div class="ry-maps" id="mapPick"></div>`
     : (o.id === 'fighter' || o.id === 'tekken') ? `<label>Choisis ton combattant</label><div class="char-pick" id="charPick"></div><p class="char-desc" id="charDesc"></p>`
-    : o.id === 'atelier' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc">Dans l'atelier, le métier ne change que l'apparence de ton ouvrier.</p>`
+    : o.id === 'atelier' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc">Dans l'atelier, le métier ne change que l'apparence de ton ouvrier.</p><label>Production</label><div class="ry-maps" id="mapPick"></div>`
     : o.id === 'royale' ? `<label>Choisis ton métier</label><div class="ry-picks" id="charPick"></div><p class="char-desc" id="charDesc"></p><label>Carte</label><div class="ry-maps" id="mapPick"></div>` : '';
   stage.innerHTML = `<div class="screen">
     <h4>${o.title}</h4>
@@ -123,14 +122,14 @@ function renderLobbyForm(o, code = '') {
   if (o.id === 'fighter') renderCharPick($('#charPick'), $('#charDesc'));
   if (o.id === 'tekken') renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'char3d');
   if (o.id === 'course') { renderCharPick($('#charPick'), $('#charDesc'), TK_ROSTER, 'charKart'); renderTrackPick($('#mapPick')); }
-  if (o.id === 'atelier') renderMetierPick($('#charPick'), $('#charDesc'));
+  if (o.id === 'atelier') { renderMetierPick($('#charPick'), $('#charDesc')); renderAtelierModePick($('#mapPick')); }
   if (o.id === 'royale') { renderMetierPick($('#charPick'), $('#charDesc')); renderMapPick($('#mapPick')); }
-  if (o.id === 'fighter' || o.id === 'tekken') { const b = document.createElement('button'); b.className = 'btn btn-sm btn-ghost combo-btn'; b.type = 'button'; b.textContent = '📖 Guide des combos'; b.addEventListener('click', () => openComboGuide(o.id)); $('#charDesc').after(b); }
+  if (o.id === 'tekken') { const b = document.createElement('button'); b.className = 'btn btn-sm btn-ghost combo-btn'; b.type = 'button'; b.textContent = '📖 Guide des combos'; b.addEventListener('click', () => openComboGuide(o.id)); $('#charDesc').after(b); }
   const name = () => { const n = $('#onName').value.trim().slice(0, 16) || 'Fondeur'; save.onlineName = n; persist(); return n; };
   const opt = () => (o.id === 'fighter' ? { char: save.char || 'fondeur' } : o.id === 'tekken' ? { char: save.char3d || 'fondeur' }
     : o.id === 'royale' ? { char: save.metier || 'fondeur', map: save.ryMap || 'random' }
     : o.id === 'course' ? { char: save.charKart || 'fondeur', map: save.kartMap || 'random' }
-    : o.id === 'atelier' ? { char: save.metier || 'fondeur' } : {});
+    : o.id === 'atelier' ? { char: save.metier || 'fondeur', map: save.atMode || 'grande' } : {});
   const go = async msg => {
     try { await connect(); send({ ...msg, name: name(), opt: opt() }); } catch (e) { toast(e.message); }
   };
@@ -159,7 +158,7 @@ function renderRoom() {
       <span>${esc(s.name)}<em>${esc(charOf(s))}</em>${i === mySeat ? ' <em>(toi)</em>' : ''}${s.bot ? ' <em>· robot</em>' : ''}${!s.online ? ' <em>· déconnecté</em>' : ''}</span>
       ${isHost && s.bot ? `<button class="icon-btn small" data-kick="${i}" aria-label="Retirer ${esc(s.name)}">✕</button>` : ''}
     </li>`).join('')}</ul>
-    ${room.kind === 'fighter' || room.kind === 'tekken' ? '<button class="btn btn-sm btn-ghost combo-btn" id="roomCombos">📖 Guide des combos</button>' : ''}
+    ${room.kind === 'tekken' ? '<button class="btn btn-sm btn-ghost combo-btn" id="roomCombos">📖 Guide des combos</button>' : ''}
     ${isHost ? `<div class="end-actions">
         ${room.seats.length < room.max ? '<button class="btn btn-ghost" id="botBtn">+ Ajouter un robot</button>' : ''}
         <button class="btn btn-hot" id="startBtn">Lancer la partie</button>

@@ -516,7 +516,7 @@ function startRoyaleClient() {
     FLOOR.lines.forEach(([a, c, d, e]) => { b.beginPath(); b.moveTo(a * k, c * k); b.lineTo(d * k, e * k); b.stroke(); });
     b.setLineDash([]);
     b.font = `900 ${Math.round(90 * k * 3)}px "Big Shoulders Display", Impact`; b.fillStyle = 'rgba(255,255,255,.09)'; b.textAlign = 'center';
-    b.fillText(`ESFF 101 · ${(MAP.title || '').toUpperCase()}`, w / 2, h / 2 + 330 * k);
+    b.fillText(`ESFF 102 · ${(MAP.title || '').toUpperCase()}`, w / 2, h / 2 + 330 * k);
   });
   floorTex.anisotropy = 4;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, MAP.h), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.92 }));
@@ -533,7 +533,7 @@ function startRoyaleClient() {
   // obstacles avec textures dessinées
   const stripes = (b, w, y, hh) => { b.fillStyle = '#F5B700'; b.fillRect(0, y, w, hh); b.fillStyle = '#1a1a1a'; for (let x = -hh; x < w; x += hh * 2) { b.beginPath(); b.moveTo(x, y + hh); b.lineTo(x + hh, y); b.lineTo(x + hh * 1.6, y); b.lineTo(x + hh * 0.6, y + hh); b.fill(); } };
   const T = {
-    conteneur: tkTexture(256, 128, (b, w, h) => { b.fillStyle = '#9e2430'; b.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 16) { b.fillStyle = 'rgba(255,255,255,.08)'; b.fillRect(x, 0, 6, h); b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(x + 8, 0, 4, h); } b.fillStyle = 'rgba(255,255,255,.65)'; b.font = '900 22px Archivo, sans-serif'; b.fillText('ESFF 101', 18, 40); b.fillStyle = 'rgba(0,0,0,.25)'; b.fillRect(0, h - 8, w, 8); }),
+    conteneur: tkTexture(256, 128, (b, w, h) => { b.fillStyle = '#9e2430'; b.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 16) { b.fillStyle = 'rgba(255,255,255,.08)'; b.fillRect(x, 0, 6, h); b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(x + 8, 0, 4, h); } b.fillStyle = 'rgba(255,255,255,.65)'; b.font = '900 22px Archivo, sans-serif'; b.fillText('ESFF 102', 18, 40); b.fillStyle = 'rgba(0,0,0,.25)'; b.fillRect(0, h - 8, w, 8); }),
     moules: tkTexture(128, 128, (b, w, h) => { b.fillStyle = '#8b6a46'; b.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 32) { b.fillStyle = 'rgba(0,0,0,.28)'; b.fillRect(0, y, w, 3); b.fillStyle = 'rgba(255,230,190,.12)'; b.fillRect(0, y + 3, w, 3); } for (let i = 0; i < 300; i++) { b.fillStyle = `rgba(${Math.random() < 0.5 ? '0,0,0' : '255,240,210'},.08)`; b.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }),
     mur: tkTexture(256, 256, (b, w, h) => { b.fillStyle = '#5c6067'; b.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 12) { b.fillStyle = 'rgba(255,255,255,.06)'; b.fillRect(x, 0, 5, h); b.fillStyle = 'rgba(0,0,0,.15)'; b.fillRect(x + 6, 0, 3, h); } b.fillStyle = '#3a3634'; b.fillRect(0, h - 40, w, 40); b.fillStyle = '#F5B700'; for (let x = 0; x < w; x += 32) { b.beginPath(); b.moveTo(x, h - 40); b.lineTo(x + 16, h - 40); b.lineTo(x + 8, h - 32); b.fill(); } }),
     cloture: tkTexture(128, 128, (b, w, h) => { b.fillStyle = '#7a7f86'; b.fillRect(0, 0, w, h); b.strokeStyle = 'rgba(40,40,40,.55)'; b.lineWidth = 2; for (let k = -w; k < w * 2; k += 14) { b.beginPath(); b.moveTo(k, 0); b.lineTo(k + h, h); b.moveTo(k + h, 0); b.lineTo(k, h); b.stroke(); } b.fillStyle = '#4a4e54'; b.fillRect(0, 0, w, 8); }),

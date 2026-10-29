@@ -82,7 +82,7 @@ function fg3dCreate(boardEl, v0) {
     g.save(); g.rotate(-0.14);
     g.font = '900 118px "Big Shoulders Display", Impact'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.shadowColor = 'rgba(236,100,30,.7)'; g.shadowBlur = 30; g.fillStyle = '#EC641E'; g.fillText('FORGEOPOLY', 0, -150);
-    g.shadowBlur = 0; g.font = '700 26px Archivo, sans-serif'; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('ESFF · PROMOTION 101', 0, -78);
+    g.shadowBlur = 0; g.font = '700 26px Archivo, sans-serif'; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('ESFF · PROMOTION 102', 0, -78);
     g.restore();
     const deck = (x, y, rot, col, l1, l2, ico) => {
       g.save(); g.translate(x, y); g.rotate(rot);
