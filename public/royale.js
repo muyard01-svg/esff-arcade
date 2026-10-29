@@ -65,7 +65,13 @@ function stopRoyale() { if (ryClient && ryClient !== 'loading') ryClient.stop();
 function updateRoyale() {
   if (!trackInfo || !trackInfo.map) return;
   if (view.finished) {
-    if (ryClient && ryClient !== 'loading' && !ryClient.endShown) { ryClient.push(view); ryClient.endShown = true; setTimeout(() => updateRoyale(), 2600); return; }
+    if (ryClient && ryClient !== 'loading' && !ryClient.endShown) {
+      ryClient.push(view); ryClient.endShown = true;
+      const won = view.finished[0] === mySeat && view.p[mySeat] && view.p[mySeat].al;
+      if (won) ryClient.victory();
+      setTimeout(() => updateRoyale(), won ? 6500 : 2600);
+      return;
+    }
     if (document.getElementById('rewardBox')) return;
     stopRoyale();
     resultScreen(view.finished.slice(0, 10).map((i, k) => {
@@ -119,123 +125,184 @@ function ryWeaponModel(wid, rar) {
   return g;
 }
 
-/* ---------- squelette d'un ouvrier (environ 104 unités de haut, regarde vers +Z) ---------- */
+/* ---------- squelette d'un ouvrier (environ 108 unités de haut, regarde vers +Z) ----------
+   bassin → bas du dos → poitrine → cou → tête ; clavicules → épaules → coudes → poignets → mains ;
+   hanches → genoux → chevilles → orteils. */
 function ryRig(metier) {
   const M = RY_METIERS[metier] || RY_METIERS.fondeur;
   const suit = ryMat(M.color), suitD = ryMat(shade(M.color, -0.3)), skin = ryMat('#e0a77d'), pants = ryMat('#2b2e33'), boot = ryMat('#111214'), glove = ryMat('#b07a45');
   const limb = (len, r, mat) => {
     const g = new THREE.Group();
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.85, len, 8), mat); m.position.y = -len / 2;
-    const j = new THREE.Mesh(new THREE.SphereGeometry(r * 1.05, 8, 6), mat);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.82, len, 9), mat); m.position.y = -len / 2;
+    const j = new THREE.Mesh(new THREE.SphereGeometry(r * 1.05, 9, 7), mat);
     g.add(m, j);
     return g;
   };
+  const G = (parent, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
+  const mesh = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
   const root = new THREE.Group();
-  const body = new THREE.Group(); root.add(body);          // pivot de la chute
-  const hips = new THREE.Group(); hips.position.y = 50; body.add(hips);
-  hips.add(new THREE.Mesh(new THREE.BoxGeometry(26, 11, 16), pants));
-  const torso = new THREE.Group(); hips.add(torso);
-  const chest = new THREE.Mesh(new THREE.BoxGeometry(30, 36, 18), suit); chest.position.y = 19; torso.add(chest);
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(30.6, 5, 18.6), suitD); belt.position.y = 3; torso.add(belt);
+  const body = G(root);                                    // pivot de la chute
+  const hips = G(body, 0, 50, 0);
+  mesh(hips, new THREE.BoxGeometry(26, 11, 16), pants);
+  const spine = G(hips, 0, 4, 0);                          // bas du dos
+  mesh(spine, new THREE.BoxGeometry(27, 15, 16.5), suit, 0, 7, 0);
+  mesh(spine, new THREE.BoxGeometry(28, 5, 17.5), suitD, 0, 0, 0);   // ceinture
+  const torso = G(spine, 0, 15, 0);                        // poitrine
+  mesh(torso, new THREE.BoxGeometry(31, 22, 18.5), suit, 0, 11, 0);
   if (metier === 'fondeur' || metier === 'forgeron' || metier === 'soudeur') {   // tablier
-    const ap = new THREE.Mesh(new THREE.BoxGeometry(22, 40, 2), metier === 'fondeur' ? ryMat('#c9ccd1', { metalness: 0.7, roughness: 0.3 }) : ryMat('#6b4227'));
-    ap.position.set(0, 10, 10); torso.add(ap);
+    mesh(torso, new THREE.BoxGeometry(22, 40, 2), metier === 'fondeur' ? ryMat('#c9ccd1', { metalness: 0.7, roughness: 0.3 }) : ryMat('#6b4227'), 0, 2, 10);
   }
-  const logo = new THREE.Mesh(new THREE.RingGeometry(3, 4.6, 16), new THREE.MeshBasicMaterial({ color: '#ffffff' })); logo.position.set(-7, 28, 9.2); torso.add(logo);
-  const head = new THREE.Group(); head.position.y = 37; torso.add(head);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.5, 6, 8), skin); neck.position.y = 2; head.add(neck);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(9, 14, 10), skin); skull.position.y = 10; head.add(skull);
+  mesh(torso, new THREE.RingGeometry(3, 4.6, 16), new THREE.MeshBasicMaterial({ color: '#ffffff' }), -7, 14, 9.4);
+  const neck = G(torso, 0, 22, 0);
+  mesh(neck, new THREE.CylinderGeometry(4, 4.6, 7, 8), skin, 0, 2.5, 0);
+  const head = G(neck, 0, 5, 0);
+  mesh(head, new THREE.SphereGeometry(9, 16, 12), skin, 0, 0, 0);
   const eyeM = ryMat('#111');
-  [-3.5, 3.5].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6, 6), eyeM); e.position.set(x, 11, 8.3); head.add(e); });
+  [-3.5, 3.5].forEach(x => mesh(head, new THREE.SphereGeometry(1.2, 6, 6), eyeM, x, 1, 8.3));
+  mesh(head, new THREE.BoxGeometry(6, 1.5, 1), ryMat('#7a4a3a'), 0, -4, 8.4);    // bouche
   if (metier === 'soudeur') {
-    const mask = new THREE.Mesh(new THREE.BoxGeometry(17, 14, 6), ryMat(M.hat, { metalness: 0.4 })); mask.position.set(0, 11, 8); head.add(mask);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(11, 3.5, 1), ryMat('#3a8a5a', { emissive: '#1a4a2a' })); glass.position.set(0, 12, 11.2); head.add(glass);
+    mesh(head, new THREE.BoxGeometry(17, 14, 6), ryMat(M.hat, { metalness: 0.4 }), 0, 1, 8);
+    mesh(head, new THREE.BoxGeometry(11, 3.5, 1), ryMat('#3a8a5a', { emissive: '#1a4a2a' }), 0, 2, 11.2);
   } else {
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(10.5, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), ryMat(M.hat, { metalness: metier === 'fondeur' ? 0.7 : 0.15, roughness: 0.4 }));
-    helm.position.y = 11; head.add(helm);
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(14, 1.6, 6), helm.material); brim.position.set(0, 12, 10); head.add(brim);
-    if (metier === 'fondeur') { const visor = new THREE.Mesh(new THREE.BoxGeometry(14, 6, 1.5), ryMat('#f5b700', { metalness: 0.8, roughness: 0.2, emissive: '#3a2a00' })); visor.position.set(0, 9, 9.6); head.add(visor); }
+    const helm = mesh(head, new THREE.SphereGeometry(10.5, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), ryMat(M.hat, { metalness: metier === 'fondeur' ? 0.7 : 0.15, roughness: 0.4 }), 0, 1, 0);
+    mesh(head, new THREE.BoxGeometry(14, 1.6, 6), helm.material, 0, 2, 10);
+    if (metier === 'fondeur') mesh(head, new THREE.BoxGeometry(14, 6, 1.5), ryMat('#f5b700', { metalness: 0.8, roughness: 0.2, emissive: '#3a2a00' }), 0, -1, 9.6);
   }
   const arm = side => {
-    const sh = new THREE.Group(); sh.position.set(side * 18.5, 32, 0); torso.add(sh);
+    const clav = G(torso, side * 7, 18, 0);                // clavicule
+    mesh(clav, new THREE.BoxGeometry(11, 5, 7), suit, side * 5, 0, 0);
+    const sh = G(clav, side * 11.5, -1, 0);                // épaule
     sh.add(limb(18, 5, suit));
-    const el = new THREE.Group(); el.position.y = -18; sh.add(el);
-    el.add(limb(17, 4.4, suit));
-    const hand = new THREE.Group(); hand.position.y = -19; el.add(hand);
-    hand.add(new THREE.Mesh(new THREE.SphereGeometry(4.8, 8, 6), glove));
-    return { sh, el, hand };
+    const el = G(sh, 0, -18, 0);                           // coude
+    el.add(limb(16, 4.4, suit));
+    const wrist = G(el, 0, -17, 0);                        // poignet
+    mesh(wrist, new THREE.SphereGeometry(3.2, 8, 6), glove);
+    mesh(wrist, new THREE.BoxGeometry(7, 8, 5), glove, 0, -4.5, 0.5);             // paume
+    mesh(wrist, new THREE.BoxGeometry(6.4, 4, 4.4), glove, 0, -9, 1.5);          // doigts repliés
+    mesh(wrist, new THREE.BoxGeometry(2.6, 5, 2.6), glove, -side * 4, -4, 2.5);  // pouce
+    const hand = G(wrist, 0, -6, 0);                       // prise de l'outil
+    return { clav, sh, el, wrist, hand };
   };
   const leg = side => {
-    const hp = new THREE.Group(); hp.position.set(side * 7.5, -3, 0); hips.add(hp);
+    const hp = G(hips, side * 7.5, -3, 0);
     hp.add(limb(22, 6.4, pants));
-    const kn = new THREE.Group(); kn.position.y = -22; hp.add(kn);
-    kn.add(limb(20, 5.4, pants));
-    const b = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 17), boot); b.position.set(0, -21, 3.5); kn.add(b);
-    return { hp, kn };
+    const kn = G(hp, 0, -22, 0);
+    kn.add(limb(19, 5.4, pants));
+    const ank = G(kn, 0, -19, 0);                          // cheville
+    mesh(ank, new THREE.BoxGeometry(10, 7, 12), boot, 0, -3, 2);
+    const toe = G(ank, 0, -4, 8);                          // orteils
+    mesh(toe, new THREE.BoxGeometry(10, 5, 7), boot, 0, -1.5, 3);
+    return { hp, kn, ank, toe };
   };
   const L = { arm: arm(-1), leg: leg(-1) }, R = { arm: arm(1), leg: leg(1) };
   // couverture aluminisée qui sert de voile pendant le largage
   const canopy = new THREE.Mesh(new THREE.SphereGeometry(70, 16, 6, 0, Math.PI * 2, 0, Math.PI * 0.32), ryMat('#d8dde3', { metalness: 0.9, roughness: 0.25, side: THREE.DoubleSide }));
   canopy.position.y = 120; canopy.visible = false; root.add(canopy);
-  return { root, body, hips, torso, head, L, R, canopy, weapon: null, wkey: '', phase: Math.random() * 6, hitT: 0, shotT: 0, swingT: 0, dieT: 0, fallDir: 1 };
+  const bones = { hips, spine, torso, neck, head };
+  ['L', 'R'].forEach(sd => {
+    const S = sd === 'L' ? L : R;
+    Object.assign(bones, { [`${sd}clav`]: S.arm.clav, [`${sd}sh`]: S.arm.sh, [`${sd}el`]: S.arm.el, [`${sd}wr`]: S.arm.wrist,
+      [`${sd}hp`]: S.leg.hp, [`${sd}kn`]: S.leg.kn, [`${sd}an`]: S.leg.ank, [`${sd}to`]: S.leg.toe });
+  });
+  return { root, body, hips, spine, torso, neck, head, L, R, canopy, bones, J: {}, spd: 0, weapon: null, wkey: '', phase: Math.random() * 6, hitT: 0, shotT: 0, swingT: 0, dieT: 0, fallDir: 1, t: Math.random() * 10 };
 }
 
-/* pose procédurale : marche/course selon la vitesse réelle, saut, visée haut/bas, coups, recul, chute */
+/* pose procédurale : chaque articulation vise un angle cible et le rejoint en douceur (amorti),
+   d'où des enchaînements souples entre marche, course, saut, visée, coups, recul et chute */
 function ryPose(rig, st, dt) {
-  const { hips, torso, head, L, R } = rig;
-  const sp = Math.min(1.4, st.speed / 240);
-  rig.phase += st.speed * dt / 26;
-  const s = Math.sin(rig.phase), c = Math.cos(rig.phase);
+  rig.t += dt;
+  rig.spd += (st.speed - rig.spd) * Math.min(1, dt * 7);          // vitesse lissée : pas de saccade au démarrage
+  const sp = Math.min(1.4, rig.spd / 240);
+  rig.phase += rig.spd * dt / 26;
+  const s = Math.sin(rig.phase), c = Math.cos(rig.phase), t = rig.t;
   const air = st.air;
-  const legAmp = air ? 0 : 0.75 * sp;
-  L.leg.hp.rotation.x = air ? -0.9 : -s * legAmp;
-  R.leg.hp.rotation.x = air ? -0.2 : s * legAmp;
-  L.leg.kn.rotation.x = air ? 1.3 : Math.max(0, c) * 1.1 * sp + 0.05;
-  R.leg.kn.rotation.x = air ? 0.5 : Math.max(0, -c) * 1.1 * sp + 0.05;
-  hips.position.y = 50 - Math.abs(c) * 2.5 * sp - (air ? 4 : 0);
-  hips.rotation.y = s * 0.12 * sp;
-  torso.rotation.y = -s * 0.1 * sp;
-  // le buste suit la visée, avec un penché en avant à la course
-  const lean = sp > 1.1 ? 0.18 : sp * 0.08;
-  torso.rotation.x = lean - st.pitch * 0.35;
-  head.rotation.x = -st.pitch * 0.45;
-  torso.rotation.z = rig.hitT > 0 ? Math.sin(rig.hitT * 40) * 0.12 : 0;
+  const T = {};
+  const set = (bone, x = 0, y = 0, z = 0) => { T[bone + '.x'] = x; T[bone + '.y'] = y; T[bone + '.z'] = z; };
+  const breathe = Math.sin(t * 2.1) * 0.025;
+  const lean = sp > 1.1 ? 0.2 : sp * 0.09;
+  // jambes : balancier, genou qui se plie au passage, pied qui se déroule (talon puis pointe)
+  const legAmp = air ? 0 : 0.78 * sp;
+  if (air) {
+    set('Lhp', -0.95); set('Rhp', -0.25); set('Lkn', 1.35); set('Rkn', 0.55); set('Lan', 0.35); set('Ran', 0.2); set('Lto'); set('Rto');
+  } else {
+    set('Lhp', -s * legAmp, 0, -0.03); set('Rhp', s * legAmp, 0, 0.03);
+    set('Lkn', Math.max(0, c) * 1.15 * sp + 0.06); set('Rkn', Math.max(0, -c) * 1.15 * sp + 0.06);
+    set('Lan', (Math.max(0, -c) * 0.38 - Math.max(0, s) * 0.22) * sp); set('Ran', (Math.max(0, c) * 0.38 - Math.max(0, -s) * 0.22) * sp);
+    set('Lto', Math.max(0, -s) * 0.5 * sp); set('Rto', Math.max(0, s) * 0.5 * sp);
+  }
+  // bassin qui rebondit et balance, colonne en contre-rotation, tête stabilisée
+  T['hips.py'] = 50 - Math.abs(c) * 2.6 * sp - (air ? 4 : 0) + (sp < 0.1 ? Math.sin(t * 2.1) * 0.4 : 0);
+  set('hips', 0, s * 0.13 * sp, c * 0.05 * sp);
+  set('spine', lean * 0.5 - st.pitch * 0.15, -s * 0.07 * sp, -c * 0.035 * sp);
+  set('torso', lean * 0.5 - st.pitch * 0.2 + breathe, -s * 0.08 * sp, rig.hitT > 0 ? Math.sin(rig.hitT * 40) * 0.12 : 0);
+  set('neck', -st.pitch * 0.2, s * 0.05 * sp);
+  set('head', -st.pitch * 0.3 - lean * 0.6, s * 0.04 * sp, -c * 0.02 * sp);
+  set('Lclav', 0, 0, breathe * 0.5); set('Rclav', 0, 0, -breathe * 0.5);
   rig.hitT = Math.max(0, rig.hitT - dt);
-  // bras
+  // bras selon l'outil en main
   const kind = st.wid === 'poings' ? 'fist' : RY_GUNS.includes(st.wid) ? 'gun' : 'melee';
   const aim = -Math.PI / 2 - st.pitch * 0.65 + lean;
   rig.shotT = Math.max(0, rig.shotT - dt);
   rig.swingT = Math.max(0, rig.swingT - dt);
-  const sw = rig.swingT > 0 ? 1 - rig.swingT / 0.3 : -1;    // 0 → 1 pendant le coup
+  const sw = rig.swingT > 0 ? 1 - rig.swingT / 0.3 : -1;          // 0 → 1 pendant le coup
+  let fast = false;
   if (kind === 'gun') {
-    R.arm.sh.rotation.set(aim + rig.shotT * 2, 0, 0.1); R.arm.el.rotation.x = -0.15;
-    L.arm.sh.rotation.set(aim + 0.15, 0, -0.55); L.arm.el.rotation.x = -0.9;
+    set('Rsh', aim + rig.shotT * 2, 0, 0.1); set('Rel', -0.15); set('Rwr', 0.1 - rig.shotT);
+    set('Lsh', aim + 0.15, 0, -0.55); set('Lel', -0.9); set('Lwr', 0.2);
+    set('Rclav', 0, 0.12, 0); set('Lclav', 0, -0.2, 0);
+    fast = rig.shotT > 0;
   } else if (kind === 'melee') {
-    if (sw >= 0) { R.arm.sh.rotation.set(-2.7 + sw * 2.6, 0, 0.2); R.arm.el.rotation.x = -0.4 + sw * 0.3; }
-    else { R.arm.sh.rotation.set(-0.9 - st.pitch * 0.4 + s * 0.15 * sp, 0, 0.15); R.arm.el.rotation.x = -1.3; }
-    L.arm.sh.rotation.set(s * 0.7 * sp - 0.2, 0, -0.15); L.arm.el.rotation.x = -0.5;
+    if (sw >= 0) { set('Rsh', -2.7 + sw * 2.6, 0, 0.2); set('Rel', -0.4 + sw * 0.3); set('Rwr', -0.6 + sw * 1.1); set('Rclav', 0, 0, 0.15 - sw * 0.2); fast = true; }
+    else { set('Rsh', -0.9 - st.pitch * 0.4 + s * 0.15 * sp, 0, 0.15); set('Rel', -1.3); set('Rwr', 0.3); }
+    set('Lsh', s * 0.7 * sp - 0.2, 0, -0.15); set('Lel', -0.45 - Math.max(0, s) * 0.5 * sp); set('Lwr', 0.1);
   } else {   // poings : garde de boxeur, direct du droit
     const punch = sw >= 0 ? Math.sin(sw * Math.PI) : 0;
-    R.arm.sh.rotation.set(-1.1 - punch * 0.5 - st.pitch * 0.4, 0, 0.25); R.arm.el.rotation.x = -1.9 + punch * 1.7;
-    L.arm.sh.rotation.set(-1.1 - st.pitch * 0.4, 0, -0.25); L.arm.el.rotation.x = -1.9;
+    set('Rsh', -1.1 - punch * 0.5 - st.pitch * 0.4, 0, 0.25); set('Rel', -1.9 + punch * 1.7); set('Rwr', 0.2 - punch * 0.3);
+    set('Lsh', -1.1 - st.pitch * 0.4 + s * 0.1 * sp, 0, -0.25); set('Lel', -1.9); set('Lwr', 0.2);
+    set('Rclav', 0, punch * 0.25, 0);
+    fast = punch > 0;
   }
   if (st.weaponObj) st.weaponObj.rotation.x = kind === 'gun' ? Math.PI / 2 : 0;
   rig.canopy.visible = !!st.glide;
   if (st.hang || st.glide) {   // bras levés : accroché au pont roulant ou à la voile
-    const sw = Math.sin(rig.phase * 0.3 + performance.now() / 400) * 0.15;
-    R.arm.sh.rotation.set(-Math.PI + 0.15, 0, 0.25); R.arm.el.rotation.x = -0.1;
-    L.arm.sh.rotation.set(-Math.PI + 0.15, 0, -0.25); L.arm.el.rotation.x = -0.1;
-    L.leg.hp.rotation.x = sw - 0.1; R.leg.hp.rotation.x = -sw - 0.1; L.leg.kn.rotation.x = 0.3; R.leg.kn.rotation.x = 0.3;
-    torso.rotation.x = 0; head.rotation.x = st.hang ? 0.3 : 0.1;
+    const swg = Math.sin(t * 2.5) * 0.15;
+    set('Rsh', -Math.PI + 0.15, 0, 0.25); set('Rel', -0.1); set('Lsh', -Math.PI + 0.15, 0, -0.25); set('Lel', -0.1);
+    set('Rclav', 0, 0, 0.3); set('Lclav', 0, 0, -0.3);
+    set('Lhp', swg - 0.1); set('Rhp', -swg - 0.1); set('Lkn', 0.3); set('Rkn', 0.3); set('Lan', 0.3); set('Ran', 0.3);
+    set('spine'); set('torso'); set('head', st.hang ? 0.3 : 0.1);
     if (st.weaponObj) st.weaponObj.visible = false;
   } else if (st.weaponObj) st.weaponObj.visible = true;
+  if (st.win) {   // victoire : bras en V qui battent la mesure, petits sauts
+    const pump = Math.sin(t * 8);
+    set('Rsh', -2.7 + pump * 0.25, 0, 0.45); set('Lsh', -2.7 - pump * 0.25, 0, -0.45); set('Rel', -0.3); set('Lel', -0.3);
+    set('Rwr', 0.4); set('Lwr', 0.4); set('Rclav', 0, 0, 0.35); set('Lclav', 0, 0, -0.35);
+    set('torso', -0.25); set('spine', -0.1); set('head', -0.35, Math.sin(t * 3) * 0.3);
+    const hop = Math.max(0, Math.sin(t * 8));
+    T['hips.py'] = 50 + hop * 8;
+    set('Lkn', 0.4 - hop * 0.3); set('Rkn', 0.4 - hop * 0.3); set('Lhp', -0.2); set('Rhp', -0.2);
+    fast = true;
+    if (st.weaponObj) st.weaponObj.visible = false;
+  }
+  // amorti vers les cibles (plus vif pour les coups et les tirs)
+  const k = 1 - Math.exp(-dt * 14), kf = 1 - Math.exp(-dt * 40);
+  for (const key in T) {
+    const cur = rig.J[key] === undefined ? T[key] : rig.J[key];
+    const quick = fast && (key[0] === 'R' || key[0] === 'L') && (key.includes('sh') || key.includes('el') || key.includes('wr') || key.includes('clav'));
+    rig.J[key] = cur + (T[key] - cur) * (quick ? kf : k);
+  }
+  for (const key in rig.J) {
+    const [bone, ax] = key.split('.');
+    if (ax === 'py') rig.hips.position.y = rig.J[key];
+    else rig.bones[bone].rotation[ax] = rig.J[key];
+  }
   // chute à la mort : bascule avec l'accélération de la gravité, puis rebond amorti
   if (st.dead) {
     rig.dieT += dt;
-    const k = Math.min(1, rig.dieT * rig.dieT * 3.2);
-    rig.body.rotation.x = rig.fallDir * (Math.PI / 2) * k + (k >= 1 ? Math.sin(Math.min(1, rig.dieT - 0.56) * 9) * 0.04 * Math.max(0, 1 - (rig.dieT - 0.56) * 2) : 0);
-    rig.body.position.y = 6 * k;
-    L.arm.sh.rotation.z = -0.9 * k; R.arm.sh.rotation.z = 0.9 * k;
+    const kk = Math.min(1, rig.dieT * rig.dieT * 3.2);
+    rig.body.rotation.x = rig.fallDir * (Math.PI / 2) * kk + (kk >= 1 ? Math.sin(Math.min(1, rig.dieT - 0.56) * 9) * 0.04 * Math.max(0, 1 - (rig.dieT - 0.56) * 2) : 0);
+    rig.body.position.y = 6 * kk;
+    rig.L.arm.sh.rotation.z = -0.9 * kk; rig.R.arm.sh.rotation.z = 0.9 * kk;
+    rig.head.rotation.x = 0.4 * kk;
   } else { rig.dieT = 0; rig.body.rotation.x = 0; rig.body.position.y = 0; }
 }
 
@@ -640,8 +707,11 @@ function startRoyaleClient() {
   const project = (x, y, z) => { v3.set(x, z, y).project(cam); return v3.z < 1 && Math.abs(v3.x) < 1.2 && Math.abs(v3.y) < 1.2 ? [(v3.x + 1) / 2 * W, (1 - v3.y) / 2 * H] : null; };
 
   /* ---------- réception ---------- */
+  const snaps = [];
+  let victory = null, myPlace = 0;
   function push(v) {
     prev = cur || v; prevAt = curAt || performance.now(); cur = v; curAt = performance.now();
+    snaps.push({ at: curAt, v }); if (snaps.length > 30) snaps.shift();
     if (v.loot) { loot = v.loot; syncLoot(); }
     if (v.ch) { chestList = v.ch; syncChests(v.ch); }
     const sp = v.p[mySeat];
@@ -668,7 +738,7 @@ function startRoyaleClient() {
         burst(e.x, e.y, e.z + 50, 40, '#ffb347', 380, 0.8, 120);
         if (rig) rig.fallDir = Math.random() < 0.5 ? 1 : -1;
         if (e.by === mySeat) { toast(`🔥 Élimination${e.hs ? ' à la tête' : ''} ! +25 PV (${e.left} restants)`); sfx(660, 0.2, 'triangle', 0.06, 300); }
-        if (mine) { banner = 'ÉLIMINÉ'; bannerAt = performance.now(); sfx(70, 0.8, 'sawtooth', 0.08, -20); }
+        if (mine) { myPlace = (e.left || 0) + 1; banner = `ÉLIMINÉ · TOP ${myPlace}`; bannerAt = performance.now(); sfx(70, 0.8, 'sawtooth', 0.08, -20); }
       } else if (e.k === 'splash') {
         burst(e.x, e.y, e.z, 40, '#ff8a2a', 360, 0.8, 100); sfx(120, 0.2, 'sawtooth', 0.04);
       } else if (e.k === 'spark') {
@@ -703,15 +773,20 @@ function startRoyaleClient() {
   const lerp = (a, b, t) => a + (b - a) * t;
   const angLerp = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
   const others = [];
+  const DELAY = 110;      // ms de retard d'affichage : on interpole toujours entre deux états reçus, sans à-coups
   function interp() {
-    const span = Math.max(30, curAt - prevAt);
-    const t = Math.min(1.25, (performance.now() - curAt) / span);
+    const rt = performance.now() - DELAY;
+    let a = snaps[0], b = snaps[snaps.length - 1];
+    for (let k = snaps.length - 1; k > 0; k--) if (snaps[k - 1].at <= rt) { a = snaps[k - 1]; b = snaps[k]; break; }
+    const span = Math.max(16, b.at - a.at);
+    const t = Math.max(0, Math.min(1.6, (rt - a.at) / span));        // au-delà de 1 : courte extrapolation
     return cur.p.map((p, i) => {
-      const q = prev.p[i] || p;
       if (i === mySeat && p.al && !p.bu) return { ...p, x: me.x, y: me.y, z: me.z, a: me.yaw, pt: me.pitch, vx: me.vx, vy: me.vy, gl: me.gl };
       if (!p.al) return p;
-      return { ...p, x: lerp(q.x, p.x, t), y: lerp(q.y, p.y, t), z: lerp(q.z, p.z, Math.min(1, t)), a: angLerp(q.a, p.a, Math.min(1, t)), pt: lerp(q.pt || 0, p.pt || 0, Math.min(1, t)),
-        vx: (p.x - q.x) / (span / 1000), vy: (p.y - q.y) / (span / 1000) };
+      const q = a.v.p[i] || p, r = b.v.p[i] || p;
+      if (!q.al) return { ...r };
+      return { ...p, x: lerp(q.x, r.x, t), y: lerp(q.y, r.y, t), z: lerp(q.z, r.z, Math.min(1, t)), a: angLerp(q.a, r.a, Math.min(1, t)), pt: lerp(q.pt || 0, r.pt || 0, Math.min(1, t)),
+        vx: (r.x - q.x) / (span / 1000), vy: (r.y - q.y) / (span / 1000), sw: r.sw, s: r.s, c: r.c };
     });
   }
   function focusIndex() {
@@ -854,6 +929,26 @@ function startRoyaleClient() {
       g.fillText('CLIQUE POUR VISER À LA SOURIS', W / 2, H / 2 + 61);
     }
     if (cur.phase === 'count') bigText(g, String(Math.ceil(cur.countdown)), W / 2, H / 2 - 40, 96, '#F5B700');
+    if (victory) {   // écran de victoire : TOP 1 en lettres de métal qui claquent
+      const vt = (performance.now() - victory.t0) / 1000;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, 60 * Math.min(1, vt * 3)); g.fillRect(0, H - 60 * Math.min(1, vt * 3), W, 60);
+      const k = Math.min(1, vt / 0.45), s2 = 1 + (1 - k) * 2.5;
+      g.save(); g.translate(W / 2, 170); g.scale(s2, s2); g.globalAlpha = k;
+      g.font = '900 120px "Big Shoulders Display", Impact'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 12; g.strokeStyle = '#000'; g.strokeText('TOP 1', 0, 0);
+      const gr = g.createLinearGradient(0, -60, 0, 60); gr.addColorStop(0, '#fffbe6'); gr.addColorStop(0.45, '#ffd27a'); gr.addColorStop(0.55, '#F5B700'); gr.addColorStop(1, '#8a3a0a');
+      g.fillStyle = gr; g.shadowColor = '#ff8a2a'; g.shadowBlur = 30; g.fillText('TOP 1', 0, 0); g.restore();
+      if (vt > 0.5) {
+        g.globalAlpha = Math.min(1, (vt - 0.5) / 0.4); g.font = '400 16px "Press Start 2P", monospace'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#fff';
+        g.fillText('DERNIER DEBOUT DE LA COULÉE !', W / 2, 260);
+        g.font = '900 26px "Big Shoulders Display", Impact'; g.fillStyle = '#F5B700';
+        const kills = sp ? sp.k : 0;
+        g.fillText(`${kills} ÉLIMINATION${kills > 1 ? 'S' : ''} · ${(RY_METIERS[sp ? sp.m : 'fondeur'] || RY_METIERS.fondeur).name.toUpperCase()}`, W / 2, 300);
+        g.globalAlpha = 1;
+      }
+      return;
+    }
     if (banner && performance.now() - bannerAt < 2600) bigText(g, banner, W / 2, H / 2 - 90, 54, banner === 'ÉLIMINÉ' ? '#ff6b6b' : '#F5B700');
   }
 
@@ -903,7 +998,7 @@ function startRoyaleClient() {
       lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
       cam.aspect = vmCam.aspect = cw / ch; cam.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
     }
-    const firstPerson = mode === 'fps' && fi === mySeat && alive && !sp.bu;   // le spectateur suit toujours par-dessus l'épaule
+    const firstPerson = mode === 'fps' && fi === mySeat && alive && !sp.bu && !victory;   // le spectateur suit toujours par-dessus l'épaule
     // personnages
     ps.forEach((p, i) => {
       if (!rigs[i]) { rigs[i] = ryRig(p.m); scene.add(rigs[i].root); }
@@ -920,13 +1015,26 @@ function startRoyaleClient() {
         if (rig.weapon) rig.R.arm.hand.add(rig.weapon);
       }
       const air = p.z > groundAt(p.x, p.y, p.z) + 3;
-      ryPose(rig, { speed: p.bu ? 0 : Math.hypot(p.vx || 0, p.vy || 0), air, pitch: p.pt || 0, wid: s ? s.w : 'poings', weaponObj: rig.weapon, dead: !p.al, hang: p.bu, glide: p.gl }, dt);
+      const winner = !!victory && i === mySeat;
+      ryPose(rig, { speed: p.bu || winner ? 0 : Math.hypot(p.vx || 0, p.vy || 0), air, pitch: winner ? 0 : p.pt || 0, wid: s ? s.w : 'poings', weaponObj: rig.weapon, dead: !p.al, hang: p.bu, glide: p.gl, win: winner }, dt);
     });
     // caméra
     const fa = fi === mySeat && alive ? me.yaw : f.a, fp = fi === mySeat && alive ? me.pitch : (f.pt || 0);
     const eyeZ = f.z + PH.eye - landKick * 8 + (firstPerson ? Math.sin(bob * 2) * 1.6 : 0);
     const dir = new THREE.Vector3(Math.cos(fa) * Math.cos(fp), Math.sin(fp), Math.sin(fa) * Math.cos(fp));
-    if (firstPerson) {
+    if (victory) {
+      // top 1 : la caméra tourne autour du vainqueur pendant que la fonte jaillit en gerbes dorées
+      const vt = (performance.now() - victory.t0) / 1000, ang = vt * 0.7 + fa + Math.PI;
+      const R0 = 210 - Math.min(1, vt / 2) * 70;
+      cam.position.set(f.x + Math.cos(ang) * R0, f.z + 75 + Math.sin(vt * 0.8) * 15, f.y + Math.sin(ang) * R0);
+      cam.lookAt(f.x, f.z + 75, f.y);
+      if (Math.random() < 0.7) burst(f.x + (Math.random() - 0.5) * 60, f.y + (Math.random() - 0.5) * 60, f.z + 10, 4, Math.random() < 0.5 ? '#F5B700' : '#ff8a2a', 300, 1.2, 420);
+      if (vt > 0.2 && Math.floor(vt * 2) !== victory.beat) {
+        victory.beat = Math.floor(vt * 2);
+        burst(f.x + (Math.random() - 0.5) * 300, f.y + (Math.random() - 0.5) * 300, f.z + 220, 40, ['#F5B700', '#ff6a3a', '#ffffff', '#7fd4ff'][victory.beat % 4], 500, 1.2, 50);
+        sfx(600 + (victory.beat % 4) * 120, 0.15, 'triangle', 0.04);
+      }
+    } else if (firstPerson) {
       cam.position.set(f.x, eyeZ, f.y);
     } else {
       // par-dessus l'épaule droite, recule tant que la caméra ne rentre pas dans un mur
@@ -942,7 +1050,7 @@ function startRoyaleClient() {
       cam.position.set(f.x - dir.x * best + rx * 38 * best / 150, eyeZ + 20 - dir.y * best, f.y - dir.z * best + ry * 38 * best / 150);
     }
     if (shake > 0) { cam.position.x += (Math.random() - 0.5) * 6 * shake; cam.position.y += (Math.random() - 0.5) * 6 * shake; }
-    cam.lookAt(cam.position.x + dir.x * 100, cam.position.y + dir.y * 100 + recoil * 3, cam.position.z + dir.z * 100);
+    if (!victory) cam.lookAt(cam.position.x + dir.x * 100, cam.position.y + dir.y * 100 + recoil * 3, cam.position.z + dir.z * 100);
     // fonte
     const z = cur.z;
     if (Math.abs(z.r - lavaR) > 6) {
@@ -1009,6 +1117,12 @@ function startRoyaleClient() {
 
   return {
     push, endShown: false,
+    victory() {
+      victory = { t0: performance.now(), beat: -1 };
+      if (document.pointerLockElement) document.exitPointerLock();
+      [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => sfx(f, 0.35, 'square', 0.05), k * 160));
+      setTimeout(() => { sfx(1047, 0.9, 'triangle', 0.06); sfx(784, 0.9, 'triangle', 0.04); }, 700);
+    },
     stop() {
       stop();
       window.removeEventListener('keydown', escGuard, true);

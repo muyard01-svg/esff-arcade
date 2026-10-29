@@ -66,10 +66,11 @@ function onMessage(m) {
   if (m.t === 'error') { toast(m.msg); return; }
   if (m.t === 'room') {
     room = m.room; mySeat = m.seat; isHost = m.isHost;
-    if (!room.started && quickStart && isHost) { quickStart = false; send({ t: 'start' }); return; }
+    if (!room.started && quickStart && isHost) { quickStart = false; send({ t: 'start', fill: true }); return; }
     if (!room.started) renderRoom();
   } else if (m.t === 'init') {
     trackInfo = m;
+    lastReward = null;
   } else if (m.t === 'state') {
     view = m.state;
     const h = HANDLERS[onlineKind];
@@ -163,7 +164,7 @@ function renderRoom() {
         ${room.seats.length < room.max ? '<button class="btn btn-ghost" id="botBtn">+ Ajouter un robot</button>' : ''}
         <button class="btn btn-hot" id="startBtn">Lancer la partie</button>
       </div>
-      <p class="muted small">Il manque du monde ? Des robots complètent automatiquement.</p>`
+      <p class="muted small">${room.kind === 'royale' ? 'Seuls les joueurs du salon et les robots que tu ajoutes participent.' : 'Il manque du monde ? Des robots complètent automatiquement.'}</p>`
       : '<p class="muted">En attente du lancement par l\'hôte…</p>'}
   </div>`;
   const rc = $('#roomCombos'); if (rc) rc.addEventListener('click', () => openComboGuide(room.kind));
@@ -189,7 +190,13 @@ function resultScreen(rows) {
   </div>`;
   $('#scratchGo').addEventListener('click', () => { closeGame(); openPanel('tickets'); });
   $('#menuOnline').addEventListener('click', closeGame);
-  $('#againOnline').addEventListener('click', () => { send({ t: 'leave' }); renderLobbyForm(o); });
+  // Rejouer : nouvelle partie tout de suite dans le même salon (mêmes joueurs, mêmes réglages)
+  $('#againOnline').addEventListener('click', () => {
+    if (room && ws && ws.readyState === 1) {
+      send({ t: 'again' });
+      stage.innerHTML = '<div class="screen"><p>Nouvelle partie…</p></div>';
+    } else renderLobbyForm(o);
+  });
 }
 
 /* ---------------- Démarrage ---------------- */

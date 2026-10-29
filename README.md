@@ -59,7 +59,11 @@ FPS battle royale en 3D sur **quatre cartes** au choix dans le salon (ou au hasa
 
 - Vue **1re personne** (arme en main) ou **3e personne** par-dessus l'épaule, à changer avec **V** (effet d'ondulation). Souris capturée pour viser (haut et bas), joysticks et boutons tactiles sur téléphone.
 - Personnages **articulés** (squelette animé : course, saut, visée, coups, recul, chute) et **vraie physique** : accélération, inertie, sprint (Maj), saut (Espace) et gravité, marches et toits d'obstacles.
-- Chaque navigateur prédit son propre déplacement ; le serveur vérifie qu'il est atteignable (vitesse, murs, hauteur de saut) et recale sinon. Les tirs (projectiles 3D) sont tranchés par le serveur : **tir à la tête ×1,5**, et chaque élimination rend **25 PV**.
+- Chaque navigateur prédit son propre déplacement ; le serveur vérifie qu'il est atteignable (vitesse, murs, hauteur de saut) et recale sinon. Les autres joueurs sont affichés avec 110 ms de retard, toujours entre deux états reçus (pas d'à-coups).
+- Tirs tranchés par le serveur, avec des **zones calées sur le squelette** : tête (sphère, ×1,5), buste et jambes (cylindres), et une **compensation du décalage** (on touche ce qu'on voyait à l'écran). Le tir part de l'œil, donc pile sous le viseur. Chaque élimination rend **25 PV**.
+- Squelette détaillé : bassin, bas du dos, poitrine, cou, tête, clavicules, épaules, coudes, poignets et mains, hanches, genoux, chevilles et orteils ; chaque articulation rejoint sa pose en douceur.
+- **Top 1** : cinématique de victoire (caméra qui tourne autour du vainqueur, gerbes de fonte, fanfare). Éliminé : « TOP n ».
+- Robots seulement en « Jouer contre l'ordi » ; dans un salon entre amis, seuls les joueurs et les robots ajoutés par l'hôte participent. **Rejouer** relance tout de suite une partie dans le même salon (valable pour tous les jeux en ligne).
 
 - **9 métiers**, chacun avec un petit avantage : forgeron (+15 % en mêlée), fondeur (-40 % de dégâts dans la fonte), mouleur (+8 % de vitesse), noyauteur (saute 20 % plus haut), ébarbeur (cadence +12 %), lamineur (35 d'armure au départ, qui absorbe 60 % des coups), chaudronnier (-12 % de dégâts reçus), soudeur (+20 % au chalumeau et à la louche), métallurgiste (voit les armes rares sur la mini-carte).
 - **8 armes de la métallurgie** : pince de forgeron, marteau de forge, masse à frapper, ringard (mêlée) ; riveteuse, canon à grenaille, louche de fonte (éclaboussure), chalumeau (à distance).

@@ -284,6 +284,7 @@ class Room:
         self.game = None
         self.created = time.monotonic()
         self.rewarded = False
+        self.quick = False          # partie « contre l'ordi » : les robots complètent les places
 
     @property
     def cls(self): return GAME_TYPES[self.kind]
@@ -321,9 +322,19 @@ class Room:
         name = next((n for n in BOT_NAMES if n not in used), f'Robot {len(self.seats)}')
         self.seats.append({'player': None, 'name': name, 'bot': True, 'ws': None, 'opt': {}})
 
-    async def start(self):
-        while len(self.seats) < getattr(self.cls, 'min_seats', 2):
-            self.add_bot()
+    async def start(self, fill=True):
+        self.quick = fill
+        if getattr(self.cls, 'fill_only_quick', False) and not fill:
+            # salon entre amis : seulement les joueurs présents et les robots ajoutés par l'hôte
+            if len(self.seats) < 2:
+                host = self.seats[self.seat_of(self.host)] if self.seat_of(self.host) is not None else None
+                if host and host['ws'] is not None and not host['ws'].closed:
+                    await host['ws'].send_json({'t': 'error', 'msg': 'Il faut au moins 2 participants : invite tes amis ou ajoute des robots.'})
+                return
+        else:
+            while len(self.seats) < getattr(self.cls, 'min_seats', 2):
+                self.add_bot()
+        self.rewarded = False
         self.game = self.cls([{'name': s['name'], 'bot': s['bot'], 'opt': s.get('opt') or {}} for s in self.seats])
         await self.push_lobby()
         if hasattr(self.game, 'init_payload'):
@@ -443,7 +454,15 @@ async def ws_handler(request):
                     room.seats.pop(i)
                     await room.push_lobby()
             elif t == 'start' and player == room.host and room.game is None:
-                await room.start()
+                await room.start(bool(data.get('fill')))
+            elif t == 'again' and room.game is not None and room.game.finished is not None:
+                # revanche : on relance tout de suite dans le même salon, avec les mêmes réglages
+                if room.seat_of(player) is not None:
+                    room.seats = [s for i, s in enumerate(room.seats) if s['bot'] or room.connected(i)]
+                    if room.seat_of(room.host) is None:
+                        room.host = player
+                    room.game = None
+                    await room.start(room.quick)
             elif t == 'act' and room.game is not None:
                 i = room.seat_of(player)
                 if i is not None:

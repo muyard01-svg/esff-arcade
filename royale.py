@@ -19,7 +19,12 @@ FPS = 30
 PR = 18                      # rayon d'un joueur
 BODY = 104                   # taille d'un joueur
 EYE = 92                     # hauteur des yeux
-HEAD = 82                    # au-dessus : tir à la tête
+HEAD = 86                    # au-dessus : tir à la tête
+# zones touchables, calées sur le squelette affiché (hauteurs au-dessus des pieds)
+HIT_HEAD = (97, 12)          # sphère : hauteur du centre, rayon
+HIT_TORSO = (50, 86, 17)     # cylindre vertical : bas, haut, rayon (épaules comprises)
+HIT_LEGS = (0, 50, 13)       # cylindre des jambes
+REWIND = 0.12                # compensation du décalage : un humain vise ce qu'il voit (≈ 0,12 s de retard)
 CELL = 200
 COUNTDOWN = 3.0
 
@@ -304,6 +309,7 @@ class Royale:
     min_seats = 10
     stream = True
     send_every = 2           # état envoyé 15 fois par seconde (les navigateurs interpolent)
+    fill_only_quick = True   # pas de robots dans un salon entre amis, sauf ceux ajoutés par l'hôte
 
     def __init__(self, seats):
         self.rnd = random.Random()
@@ -342,6 +348,7 @@ class Royale:
                                 'open': False, 'bonus': 0.6 if z else 0.25})
         self.chests_dirty = True
         self.proj = []
+        self.hist = []
         self.crane = 200.0
         self.events, self.eid = [], 0
         r0 = math.hypot(mp.w, mp.h) / 2 + 150
@@ -580,6 +587,9 @@ class Royale:
                 self.attack(i)
             if math.hypot(p['x'] - z['cx'], p['y'] - z['cy']) > z['r']:
                 self.damage(None, i, max(1, z['dps']) * M.get('zone', 1.0) * dt, zone=True)
+        self.hist.append([(p['x'], p['y'], p['z']) for p in self.p])
+        if len(self.hist) > FPS:
+            self.hist.pop(0)
         self.update_proj(dt)
         alive = [i for i, p in enumerate(self.p) if p['alive']]
         if len(alive) <= 1:
@@ -625,7 +635,7 @@ class Royale:
             return
         dmg = Wp['dmg'] * mult * (M.get('fire', 1.0) if wid in ('chalumeau', 'louche') else 1.0)
         cp = math.cos(pitch)
-        sx, sy, sz = ex + math.cos(yaw) * cp * 20, ey + math.sin(yaw) * cp * 20, ez - 8 + math.sin(pitch) * 20
+        sx, sy, sz = ex + math.cos(yaw) * cp * 20, ey + math.sin(yaw) * cp * 20, ez + math.sin(pitch) * 20   # part de l'œil : le viseur dit vrai
         for _ in range(Wp['pellets']):
             a = yaw + self.rnd.gauss(0, Wp['spread'])
             b = pitch + self.rnd.gauss(0, Wp['spread'] * 0.7)
@@ -634,10 +644,30 @@ class Royale:
                               Wp['life'], i, dmg, Wp['proj'], Wp.get('splash', 0), rar, Wp['grav']])
         self.event('shot', p['x'], p['y'], p['z'], seat=i, w=wid)
 
+    def past_pos(self, j, back):
+        """Position d'un joueur il y a `back` secondes (historique des dernières images)."""
+        if back <= 0 or not self.hist:
+            o = self.p[j]
+            return o['x'], o['y'], o['z']
+        k = min(len(self.hist) - 1, int(round(back * FPS)))
+        return self.hist[-1 - k][j]
+
     def body_hit(self, owner, x, y, z, rad):
+        """Le projectile touche-t-il quelqu'un ? Tête (sphère), buste et jambes (capsules), à la position que voyait le tireur."""
+        back = REWIND if owner is not None and not self.p[owner]['srv'] else 0.0
         for j, o in enumerate(self.p):
-            if j != owner and o['alive'] and not o['bus'] and (o['x'] - x) ** 2 + (o['y'] - y) ** 2 < (PR + rad) ** 2 and o['z'] - rad <= z <= o['z'] + BODY + rad:
-                return j, z >= o['z'] + HEAD
+            if j == owner or not o['alive'] or o['bus']:
+                continue
+            px, py, pz = self.past_pos(j, back)
+            d2 = (px - x) ** 2 + (py - y) ** 2
+            if d2 > (HIT_TORSO[2] + rad + 4) ** 2:
+                continue
+            hz, hr = HIT_HEAD
+            if d2 + (pz + hz - z) ** 2 < (hr + rad) ** 2:
+                return j, True
+            for lo, hi, r in (HIT_TORSO, HIT_LEGS):         # cylindres à bouts plats : le buste ne déborde pas sur la tête
+                if pz + lo - rad <= z <= pz + hi + rad * 0.3 and d2 < (r + rad) ** 2:
+                    return j, False
         return None, False
 
     def update_proj(self, dt):
