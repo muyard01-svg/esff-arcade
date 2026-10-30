@@ -891,3 +891,57 @@ body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min
 .imm { position: absolute; inset: 0; z-index: 20; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .imm canvas { width: 100%; height: 100%; object-fit: contain; }
 .imm small { position: absolute; bottom: 8px; color: rgba(255,255,255,.5); font-size: 10px; }
+
+/* ---------- Forge Tactique ---------- */
+.ft { position: absolute; inset: 0; container-type: size; pointer-events: none; color: #f2eadc; font-family: Fredoka, Archivo, sans-serif; }
+.ft button, .ft-left, .ft-loot { pointer-events: auto; }
+.ft-top { position: absolute; top: 1cqh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 1.4cqw; padding: .8cqh 1.6cqw; background: rgba(20,14,10,.86); border: 2px solid #5a4a3c; font-size: 1.8cqw; white-space: nowrap; }
+.ft-top b { font: 400 1.2cqw "Press Start 2P", monospace; color: #F5B700; }
+.ft-top em { font: 400 1.2cqw "Press Start 2P", monospace; font-style: normal; }
+.ft-left { position: absolute; left: .8cqw; top: 1.5cqh; bottom: 34cqh; width: 20cqw; overflow: hidden; display: flex; flex-direction: column; gap: .5cqh; }
+.ft-tr { display: flex; align-items: center; gap: .6cqw; padding: .3cqh .5cqw; background: rgba(20,14,10,.8); border-left: .5cqw solid #5a4a3c; font-size: 1.75cqw; color: #a39a88; }
+.ft-tr i { flex: none; width: 2.3cqw; height: 2.3cqw; display: flex; align-items: center; justify-content: center; background: #2a221c; font-style: normal; font-weight: 700; }
+.ft-tr span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ft-tr small { font-size: 1.5cqw; }
+.ft-tr.on { border-color: var(--c); color: #fff; }
+.ft-tr.on i { background: var(--c); color: #14110e; }
+.ft-right { position: absolute; right: .8cqw; top: 1.5cqh; width: 16cqw; display: flex; flex-direction: column; gap: .4cqh; }
+.ft-pl { position: relative; display: flex; justify-content: space-between; padding: .1cqh .6cqw .7cqh; background: rgba(20,14,10,.8); font-size: 1.7cqw; overflow: hidden; }
+.ft-pl span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 11cqw; }
+.ft-pl.me { outline: 2px solid #F5B700; }
+.ft-pl.out { opacity: .35; }
+.ft-pl u { position: absolute; left: 0; bottom: 0; height: .5cqh; background: #7FD48A; }
+.ft-info { position: absolute; right: .8cqw; top: 44cqh; width: 24cqw; padding: .8cqh .8cqw; background: #f2eadc; color: #2a1c14; border: 3px solid #2a1c14; font-size: 1.6cqw; line-height: 1.2; }
+.ft-info b { font-size: 1.8cqw; }
+.ft-info p { margin: .4cqh 0 0; }
+.ft-info small { display: block; opacity: .75; }
+.ft-tags { display: flex; flex-wrap: wrap; gap: .3cqw; margin-top: .3cqh; }
+.ft-tags span { padding: 0 .4cqw; background: var(--c); color: #14110e; font-size: 1.4cqw; font-weight: 600; }
+.ft-items { position: absolute; left: .8cqw; bottom: 29cqh; display: flex; flex-wrap: wrap; gap: .4cqw; max-width: 22cqw; }
+.ft-itb { padding: .2cqw; background: #2a221c; border: 2px solid #5a4a3c; cursor: pointer; }
+.ft-itb.on { border-color: #F5B700; }
+.ft-it { display: block; width: 2.4cqw; height: 2.4cqw; background: var(--c); box-shadow: inset -3px -3px 0 rgba(0,0,0,.35), inset 3px 3px 0 rgba(255,255,255,.3); }
+.ft-bot { position: absolute; left: .8cqw; right: .8cqw; bottom: 1cqh; height: 26cqh; display: flex; gap: .8cqw; align-items: stretch; }
+.ft-eco { flex: none; width: 15cqw; display: flex; flex-direction: column; gap: .5cqh; padding: .6cqh .6cqw; background: rgba(20,14,10,.9); border: 2px solid #5a4a3c; }
+.ft-eco b { font: 400 1.6cqw "Press Start 2P", monospace; color: #F5B700; }
+.ft-eco small { font-size: 1.4cqw; line-height: 1.1; }
+.ft-eco button, .ft-ready { border: 0; border-bottom: 3px solid rgba(0,0,0,.45); background: #d9a02a; color: #14110e; font: 600 1.6cqw Fredoka, sans-serif; cursor: pointer; padding: .3cqh; }
+.ft-eco button[data-do="xp"] { background: #7fb4e8; }
+.ft-eco button:disabled, .ft-ready:disabled { background: #3a342e; color: #7a7268; cursor: default; }
+.ft-shop { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: .5cqw; }
+.ft-card { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; padding: .2cqh .3cqw; background: #f2eadc; color: #2a1c14; border: 3px solid var(--c); cursor: pointer; font-family: Fredoka, sans-serif; overflow: hidden; }
+.ft-card.off { background: rgba(20,14,10,.5); border: 2px dashed #3a342e; cursor: default; }
+.ft-card:disabled { filter: grayscale(.7) brightness(.65); cursor: default; }
+.ft-card img { height: 12cqh; image-rendering: pixelated; }
+.ft-card b { font-size: 1.5cqw; line-height: 1.05; font-weight: 600; text-align: center; }
+.ft-card small { font-size: 1.15cqw; line-height: 1.05; text-align: center; opacity: .75; }
+.ft-card em { position: absolute; top: .2cqh; right: .3cqw; font: 400 1.05cqw "Press Start 2P", monospace; color: #8a5a10; }
+.ft-ready { flex: none; width: 8.5cqw; background: #7FD48A; font-size: 1.5cqw; }
+.ft-loot { position: absolute; left: 50%; top: 24cqh; transform: translateX(-50%); padding: 1.2cqh 1.2cqw; background: rgba(20,14,10,.95); border: 3px solid #F5B700; text-align: center; }
+.ft-loot h4 { margin: 0 0 1cqh; font: 400 1.25cqw "Press Start 2P", monospace; color: #F5B700; }
+.ft-loot div { display: flex; gap: .8cqw; }
+.ft-loot button { width: 13cqw; display: flex; flex-direction: column; align-items: center; gap: .5cqh; padding: 1cqh .6cqw; background: #f2eadc; color: #2a1c14; border: 3px solid #2a1c14; cursor: pointer; font-family: Fredoka, sans-serif; }
+.ft-loot .ft-it { width: 4.4cqw; height: 4.4cqw; }
+.ft-loot b { font-size: 1.4cqw; }
+.ft-loot small { font-size: 1.2cqw; }
+.ft-hint { position: absolute; left: 50%; top: 9cqh; transform: translateX(-50%); padding: .4cqh 1cqw; background: #F5B700; color: #14110e; font-size: 1.45cqw; font-weight: 600; }

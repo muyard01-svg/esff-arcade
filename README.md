@@ -190,9 +190,12 @@ Les boosters sont gratuits et illimités, sans ticket. Chaque booster contient 5
 
 ### Forge Tactique
 
-Auto-battler à 8 (robots en renfort en partie rapide) sur les métiers de la métallurgie, avec un contenu original (`tactique.py`, `public/tactique.js`). 56 unités : un métier représentatif par rareté (commun, rare, épique, légendaire) dans chacun des 14 corps de métier. La rareté suit la difficulté de recrutement et la spécialisation : ce n'est ni un classement officiel ni un jugement sur la valeur des métiers.
+Auto-battler à 8 (robots en renfort en partie rapide) sur les métiers de la métallurgie, avec un contenu original (`tactique.py`, `public/tactique.js`). Plateau en 3D ; les personnages sont dessinés en pixel art par le code, puis extrudés en petits cubes. 56 unités : un métier représentatif par rareté (commun, rare, épique, légendaire) dans chacun des 14 corps de métier. La rareté suit la difficulté de recrutement et la spécialisation : ce n'est ni un classement officiel ni un jugement sur la valeur des métiers.
 
-Chaque manche : 30 secondes pour recruter dans la boutique commune, placer l'équipe et acheter de l'XP, puis le combat se joue seul. 3 exemplaires identiques fusionnent en une étoile de plus, 2, 4 ou 6 unités différentes d'un corps de métier donnent une synergie. Le perdant perd des PV, le dernier atelier debout gagne.
+- **Familles** : chaque unité a 2 ou 3 familles, son corps de métier et une ou deux spécialités (nucléaire, aéronautique, naval, haute pression, art, robotique, précision, charges lourdes). Plusieurs unités différentes d'une famille donnent une synergie.
+- **Attaques** : chaque corps de métier attaque à sa façon (l'arc du soudeur saute sur un second ennemi, le maillet touche les voisins, la fonte brûle, le crochet repousse…).
+- **Monstres et butin** : les manches 1, 2, 3, 8, 13, 18… opposent chacun à des monstres. Au butin, on choisit un objet parmi trois, puis on l'équipe sur une unité (3 objets au maximum).
+- **Déroulé** : 32 secondes pour recruter, placer et équiper, puis le combat se joue seul. 3 exemplaires identiques fusionnent en une étoile de plus. Le dernier atelier debout gagne.
 
 ## Classement
 
