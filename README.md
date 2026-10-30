@@ -186,7 +186,7 @@ Collection de 558 cartes (`cards_data.py`) en style cartoon : une carte par fond
 
 Nom, ville, secteur et métal viennent de l'annuaire. La rareté est une estimation (grand groupe, plusieurs sites, partenaire de l'annuaire) : aucune donnée de chiffre d'affaires ou d'effectif n'a été utilisée. Savoir-faire, Innovation et Rayonnement sont des valeurs de jeu fictives. Les personnages sont originaux et générés par `public/collect.js`, sans logo d'entreprise.
 
-3 boosters gratuits par jour, plus 1 par ticket gagné. Chaque booster contient 5 cartes, tirées par le serveur, avec au plus 12 boosters d'affilée sans alternative, légendaire ou secrète. Les cartes de la première collection sont reprises automatiquement, sauf celles des fournisseurs, retirés de la collection.
+Les boosters sont gratuits et illimités, sans ticket. Chaque booster contient 5 cartes, tirées par le serveur, avec au plus 12 boosters d'affilée sans alternative, légendaire ou secrète. Les cartes de la première collection sont reprises automatiquement, sauf celles des fournisseurs, retirés de la collection.
 
 ## Classement
 

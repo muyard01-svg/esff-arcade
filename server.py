@@ -276,7 +276,7 @@ async def api_scratch(request):
 
 
 # ---------------- Secrets à gratter et boosters de cartes ----------------
-FREE_DAY = int(os.environ.get('ESFF_FREE_DAY', '3'))    # gratuits par jour, plus 1 par ticket gagné dans la journée
+FREE_DAY = int(os.environ.get('ESFF_FREE_DAY', '3'))    # tickets secrets gratuits par jour, plus 1 par ticket gagné ; les boosters sont illimités
 SECRET_RATE = 0.7
 CARDS_BY = {}
 for c in CARDS:
@@ -335,7 +335,7 @@ async def api_cards(request):
     if not known_player(player):
         return web.json_response({'error': 'Requête invalide'}, status=400)
     with db() as con:
-        return web.json_response({'set': CARDS, 'owned': owned_cards(con, player), 'left': daily_left(con, player, 'booster_opens')})
+        return web.json_response({'set': CARDS, 'owned': owned_cards(con, player)})
 
 
 async def api_booster(request):
@@ -344,8 +344,6 @@ async def api_booster(request):
     if not known_player(player):
         return web.json_response({'error': 'Requête invalide'}, status=400)
     with db() as con:
-        if daily_left(con, player, 'booster_opens') <= 0:
-            return web.json_response({'error': 'Plus de booster pour aujourd\'hui : gagne un ticket dans un jeu ou reviens demain.'}, status=400)
         row = con.execute('select n from card_pity where player=?', (player,)).fetchone()
         pity = row[0] if row else 0
         drawn = []
@@ -362,7 +360,7 @@ async def api_booster(request):
             con.execute('insert into card_owned(player, card, n) values(?,?,1) on conflict(player, card) do update set n=n+1', (player, i))
         con.execute('insert into card_pity(player, n) values(?,?) on conflict(player) do update set n=excluded.n', (player, pity))
         con.execute('insert into booster_opens(player, day, ts) values(?,?,?)', (player, date.today().isoformat(), time.time()))
-        return web.json_response({'cards': drawn, 'isNew': [i not in before for i in drawn], 'owned': owned_cards(con, player), 'left': daily_left(con, player, 'booster_opens')})
+        return web.json_response({'cards': drawn, 'isNew': [i not in before for i in drawn], 'owned': owned_cards(con, player)})
 
 
 # ---------------- Salons en ligne ----------------

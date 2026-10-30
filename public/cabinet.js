@@ -52,7 +52,7 @@ function select(i, scroll = true) {
 function ruleFor(it) {
   if (!server) return '<span class="rule">Serveur requis pour les tickets</span>';
   if (it.kind === 'panel') return it.id === 'tickets' ? `<span class="rule">${server.tickets} ticket(s) à gratter</span>` : '';
-  if (it.kind === 'extra') return '<span class="rule">3 gratuits par jour, +1 par ticket gagné</span>';
+  if (it.kind === 'extra') return `<span class="rule">${it.id === 'boosters' ? 'Gratuit et illimité' : '3 gratuits par jour, +1 par ticket gagné'}</span>`;
   const left = server.left[it.id];
   if (left === 0) return '<span class="rule done">✔ Tickets du jour gagnés</span>';
   if (it.kind === 'online') return '<span class="rule">🎟️ Finir = 1 · Gagner = 2</span>';

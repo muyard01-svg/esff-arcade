@@ -427,19 +427,19 @@ function runSecrets(stage) {
 
 /* ---------- jeu 2 : boosters ---------- */
 function runBoosters(stage) {
-  let set = [], owned = {}, left = 0, byId = {}, query = '';
+  let set = [], owned = {}, byId = {}, query = '';
   const countOwned = () => Object.keys(owned).length;
   const home = () => {
     stage.innerHTML = `<div class="cl-wrap"><div class="pk" id="pk"><i class="pk-tear"></i><b>ESFF</b><span>Collection 102</span><small>5 cartes</small></div>
-      <p class="cl-hint"><b>${countOwned()}/${CARD_TOTAL}</b> cartes · ${left} booster${left > 1 ? 's' : ''} à ouvrir aujourd’hui (chaque ticket gagné dans un jeu en ajoute un).</p>
-      <div class="end-actions"><button class="btn btn-hot" id="pkGo" ${left ? '' : 'disabled'}>Ouvrir un booster</button><button class="btn btn-ghost" id="pkBook">Mon classeur</button></div></div>`;
+      <p class="cl-hint"><b>${countOwned()}/${CARD_TOTAL}</b> cartes · boosters gratuits et illimités</p>
+      <div class="end-actions"><button class="btn btn-hot" id="pkGo">Ouvrir un booster</button><button class="btn btn-ghost" id="pkBook">Mon classeur</button></div></div>`;
     $('#pkGo', stage).addEventListener('click', open);
     $('#pkBook', stage).addEventListener('click', () => binder());
   };
   const open = async () => {
     $('#pkGo', stage).disabled = true;
     let r; try { r = await apiCall('/api/booster', {}, true); } catch (e) { toast(e.message); return; }
-    owned = r.owned; left = r.left;
+    owned = r.owned;
     const pk = $('#pk', stage);
     $('.cl-hint', stage).textContent = 'Déchire le booster : clique dessus.';
     $('.end-actions', stage).remove();
@@ -471,7 +471,7 @@ function runBoosters(stage) {
     show();
   };
   const summary = pack => {
-    stage.innerHTML = `<div class="cl-wrap"><h4 class="cl-h">Ton booster · ${countOwned()}/${CARD_TOTAL}</h4><div class="cl-grid" id="sm"></div><div class="end-actions"><button class="btn btn-hot" id="smAg" ${left ? '' : 'disabled'}>Encore un (${left})</button><button class="btn btn-ghost" id="smBk">Mon classeur</button></div></div>`;
+    stage.innerHTML = `<div class="cl-wrap"><h4 class="cl-h">Ton booster · ${countOwned()}/${CARD_TOTAL}</h4><div class="cl-grid" id="sm"></div><div class="end-actions"><button class="btn btn-hot" id="smAg">Encore un</button><button class="btn btn-ghost" id="smBk">Mon classeur</button></div></div>`;
     pack.forEach(({ c, isNew }) => { const d = document.createElement('div'); d.className = 'cl-slot'; $('#sm', stage).appendChild(d); mountCard(d, c); if (isNew) d.insertAdjacentHTML('beforeend', '<em>NEW</em>'); d.addEventListener('click', () => zoom(c)); });
     $('#smAg', stage).addEventListener('click', home);
     $('#smBk', stage).addEventListener('click', () => binder());
@@ -509,7 +509,7 @@ function runBoosters(stage) {
     });
   };
   stage.innerHTML = '<div class="screen"><p>Préparation des boosters…</p></div>';
-  apiCall('/api/cards', {}, true).then(r => { set = r.set; owned = r.owned; left = r.left; CARD_TOTAL = set.length; set.forEach(c => { byId[c.id] = c; }); home(); }).catch(e => toast(e.message));
+  apiCall('/api/cards', {}, true).then(r => { set = r.set; owned = r.owned; CARD_TOTAL = set.length; set.forEach(c => { byId[c.id] = c; }); home(); }).catch(e => toast(e.message));
 }
 
 function openCollect(id) {
