@@ -222,58 +222,154 @@ function mountCard(host, c) {
   return el;
 }
 
-/* ---------- animation immersive de la carte secrète : on entre dans la fonderie ---------- */
+/* ---------- animation immersive de la carte secrète : on entre dans la carte et on suit tout le savoir-faire,
+   poste par poste, de la fusion au contrôle. Chaque poste est une fonction (g, k, t) : k va de 0 à 1 pendant le poste. ---------- */
+const IM_HOT = '#ffb347', IM_WHITE = '#fff1a8', IM_FLOOR = 440;
+function imPiece(g, x, y, s, col, burr = 0) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  rrect(g, -70, -26, 140, 52, 12); shape(g, col);
+  rrect(g, -30, -52, 60, 34, 8); shape(g, col);
+  g.beginPath(); g.arc(0, 0, 13, 0, 7); shape(g, '#2a1c14', 3);
+  if (burr > 0) { g.fillStyle = col; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(-60 + i * 24, 26); g.lineTo(-50 + i * 24, 26 + 16 * burr); g.lineTo(-40 + i * 24, 26); g.fill(); stroke(g, 2); } }
+  g.restore();
+}
+function imSparks(g, x, y, t, n, spread, col = '#ffd27a') {
+  g.fillStyle = col;
+  for (let i = 0; i < n; i++) { const ph = (t * 1.7 + i * 0.137) % 1, a = -1.57 + (i * 2.399 % 1 - 0.5) * spread, v = 40 + (i * 37 % 60) * 3.4; g.globalAlpha = 1 - ph; g.fillRect(x + Math.cos(a) * v * ph, y + Math.sin(a) * v * ph + 90 * ph * ph, 4, 4); }
+  g.globalAlpha = 1;
+}
+const IM_STEPS = [
+  ['La fusion', 'Ferraille et ferroalliages fondent au four à induction, vers 1 450 °C.', (g, k, t) => {
+    rrect(g, 300, 190, 240, 250, 14); shape(g, '#2b6cb0');
+    for (let i = 0; i < 4; i++) { rrect(g, 288, 222 + i * 48, 264, 18, 8); shape(g, '#c87533', 3); }
+    g.beginPath(); g.ellipse(420, 190, 112, 24, 0, 0, 7); shape(g, k > 0.35 ? IM_HOT : '#4a3a30');
+    if (k < 0.5) for (let i = 0; i < 6; i++) { const y = 20 + ((t * 300 + i * 70) % 170); rrect(g, 370 + (i * 53 % 90), y, 34, 12, 3); shape(g, '#8a8d91', 3); }
+    if (k > 0.35) imSparks(g, 420, 186, t, 26, 1.6);
+    rrect(g, 640, 300, 170, 140, 14); shape(g, '#3a3d42');
+    const lv = Math.max(0, (k - 0.5) * 2); g.fillStyle = IM_HOT; g.fillRect(652, 312, 146, 12); if (k > 0.5) { g.fillStyle = IM_WHITE; g.fillRect(585, 204, 14 , 16); g.beginPath(); g.moveTo(538, 196); g.quadraticCurveTo(690, 190, 716, 310); g.lineTo(734, 310); g.quadraticCurveTo(700, 170, 538, 176); g.fill(); }
+    rrect(g, 660, 120, 190, 74, 10); shape(g, '#14181a'); g.fillStyle = '#7dffa0'; g.font = '700 38px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(`${Math.round(25 + Math.min(1, k * 1.5) * 1425)} °C`, 755, 158);
+  }],
+  ['Le contrôle du métal', 'Le spectromètre vérifie la composition avant de couler : la nuance doit être exacte.', (g, k, t) => {
+    rrect(g, 170, 340, 620, 100, 8); shape(g, '#c9b8a0');
+    rrect(g, 210, 190, 200, 150, 12); shape(g, '#d8dde3'); g.beginPath(); g.arc(310, 262, 34, 0, 7); shape(g, '#3a3d42');
+    g.beginPath(); g.arc(310, 262, 14, 0, 7); g.fillStyle = Math.sin(t * 40) > 0 ? '#fff' : '#7fd4ff'; g.fill(); imSparks(g, 310, 262, t, 12, 3, '#bfe8ff');
+    rrect(g, 470, 120, 300, 220, 12); shape(g, '#14181a');
+    [['C', 0.72, '3,50 %'], ['Si', 0.5, '2,40 %'], ['Mn', 0.22, '0,30 %'], ['Mg', 0.12, '0,04 %']].forEach(([n, v, txt], i) => {
+      const y = 150 + i * 44, w = 150 * v * Math.min(1, k * 2.2); g.font = '700 22px Fredoka, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = '#7dffa0'; g.fillText(n, 488, y + 10);
+      g.fillRect(530, y, w, 20); if (k > 0.5) { g.textAlign = 'right'; g.fillText(txt, 756, y + 10); }
+    });
+    if (k > 0.7) { g.font = '700 26px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffd27a'; g.fillText('NUANCE OK', 620, 322); }
+  }],
+  ['Le moulage', 'Le sable est versé autour du modèle, puis serré pour garder l’empreinte.', (g, k, t) => {
+    rrect(g, 280, 220, 400, 220, 6); shape(g, '#2a2420');
+    const lv = Math.min(1, k * 1.7); g.fillStyle = '#c49a64'; g.fillRect(292, 430 - 196 * lv, 376, 196 * lv);
+    g.fillStyle = 'rgba(90,60,30,.35)'; for (let i = 0; i < 60; i++) g.fillRect(296 + (i * 83 % 360), 428 - (i * 47 % 190) * lv, 3, 3);
+    imPiece(g, 480, 380, 1, '#5a5048');
+    rrect(g, 268, 214, 24, 228, 4); shape(g, '#2f7a4f'); rrect(g, 668, 214, 24, 228, 4); shape(g, '#2f7a4f');
+    g.beginPath(); g.moveTo(400, 40); g.lineTo(560, 40); g.lineTo(510, 110); g.lineTo(450, 110); g.closePath(); shape(g, '#5c6067');
+    if (k < 0.6) { g.fillStyle = '#c49a64'; g.fillRect(462, 110, 36, 330 - 196 * lv); }
+    if (k >= 0.6) { const h = Math.abs(Math.sin((k - 0.6) * 22)); const y = 180 - h * 110; rrect(g, 470, y - 110, 20, 130, 4); shape(g, '#7a5434'); rrect(g, 436, y + 18, 88, 22, 6); shape(g, '#5c6067'); if (h < 0.15) imSparks(g, 480, 225, t, 8, 2.4, '#c49a64'); }
+  }],
+  ['Le noyautage et le remmoulage', 'Les noyaux forment les creux de la pièce. On les pose, puis on referme le moule.', (g, k, t) => {
+    rrect(g, 270, 320, 420, 120, 6); shape(g, '#c49a64'); g.fillStyle = '#2a1c14'; rrect(g, 370, 320, 220, 74, 10); g.fill();
+    const cy = 120 + Math.min(1, k * 2) * 212; rrect(g, 405, cy, 150, 34, 14); shape(g, '#e2d2a8');
+    rrect(g, 462, 0, 36, cy, 0); shape(g, 'rgba(92,96,103,.9)', 3);
+    const top = -130 + Math.max(0, (k - 0.5) * 2) * 320; rrect(g, 270, top, 420, 130, 6); shape(g, '#b08a5a');
+    g.font = '700 20px Fredoka, sans-serif'; g.fillStyle = '#2a1c14'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CHAPE', 480, top + 65); g.fillText('DESSOUS', 480, 416);
+  }],
+  ['La coulée', 'Le métal entre par le système de coulée et remplit l’empreinte sans s’interrompre.', (g, k, t) => {
+    rrect(g, 300, 210, 380, 230, 6); shape(g, '#b08a5a');
+    g.fillStyle = '#2a1c14'; rrect(g, 370, 300, 240, 90, 12); g.fill(); g.fillRect(380, 210, 26, 100); g.fillRect(556, 230, 34, 80);
+    g.save(); g.beginPath(); g.rect(360, 390 - Math.min(1, k * 1.2) * 190, 260, 200); g.clip(); g.fillStyle = IM_HOT; rrect(g, 374, 304, 232, 82, 10); g.fill(); g.fillRect(384, 210, 18, 100); g.fillRect(560, 230, 26, 80); g.restore();
+    g.save(); g.translate(330, 110); g.rotate(0.7); rrect(g, -70, -50, 130, 100, 12); shape(g, '#3a3d42'); g.fillStyle = IM_HOT; g.fillRect(-60, -46, 110, 12); rrect(g, -230, -8, 160, 16, 4); shape(g, '#5c6067'); g.restore();
+    g.fillStyle = IM_WHITE; g.fillRect(383, 120, 20, 96); imSparks(g, 393, 214, t, 22, 2.6);
+    const gl = g.createRadialGradient(480, 330, 10, 480, 330, 300); gl.addColorStop(0, `rgba(255,140,40,${0.15 + k * 0.3})`); gl.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = gl; g.fillRect(100, 0, 760, 540);
+  }],
+  ['Le décochage', 'Le moule refroidi passe sur la grille vibrante : le sable tombe, la pièce apparaît.', (g, k, t) => {
+    const sh = Math.sin(t * 60) * 4; rrect(g, 240, 400, 480, 26, 4); shape(g, '#3a3d42'); g.fillStyle = '#14181a'; for (let i = 0; i < 12; i++) g.fillRect(256 + i * 38, 404, 18, 18);
+    imPiece(g, 480 + sh, 340, 1.05, '#5a5048');
+    rrect(g, 470 + sh, 230, 20, 60, 2); shape(g, '#5a5048', 3);
+    const a = Math.max(0, 1 - k * 1.5); if (a > 0) { g.globalAlpha = a; rrect(g, 300 + sh, 200 + 30 * k, 360, 200, 8); shape(g, '#b08a5a'); g.globalAlpha = 1; }
+    g.fillStyle = '#c49a64'; for (let i = 0; i < 70; i++) { const ph = (t * 1.3 + i * 0.09) % 1; g.fillRect(260 + (i * 71 % 440), 300 + ph * 200, 5, 5); }
+  }],
+  ['La forge', 'Le lopin chauffé à blanc passe sous le pilon : la frappe donne la forme et resserre le métal.', (g, k, t) => {
+    const hits = 4, ph = k * hits, n = Math.floor(ph), f = ph - n, y = f < 0.2 ? 1 - f / 0.2 : (f - 0.2) / 0.8;
+    rrect(g, 170, 60, 60, 380, 4); shape(g, '#2f4a7a'); rrect(g, 730, 60, 60, 380, 4); shape(g, '#2f4a7a'); rrect(g, 150, 40, 660, 50, 6); shape(g, '#2a3a5a');
+    rrect(g, 320, 390, 320, 50, 6); shape(g, '#3a3d42'); rrect(g, 370, 360, 220, 30, 4); shape(g, '#5c6067');
+    const w = 110 + (n + (f < 0.2 ? f * 5 : 1)) * 42, h = 104 - (n + (f < 0.2 ? f * 5 : 1)) * 13;
+    rrect(g, 480 - w / 2, 360 - h, w, h, 14); shape(g, IM_WHITE); rrect(g, 490 - w / 2, 366 - h, w - 20, h - 12, 12); g.fillStyle = IM_HOT; g.fill();
+    const ry = 360 - h - 60 - y * 170; rrect(g, 400, ry - 100, 160, 160, 6); shape(g, '#8a8d91'); rrect(g, 455, 80, 50, Math.max(0, ry - 180), 0); shape(g, '#d8dde3', 3);
+    if (f < 0.25) imSparks(g, 480, 340 - h, t * 3, 40, 3);
+  }],
+  ['Le traitement thermique', 'Trempe puis revenu : on chauffe et on refroidit pour régler dureté et résilience.', (g, k, t) => {
+    rrect(g, 300, 300, 360, 140, 8); shape(g, '#3a5f8a'); g.fillStyle = '#7fc4e8'; g.fillRect(312, 316, 336, 114);
+    const dip = k < 0.45 ? k / 0.45 : k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3, y = 110 + dip * 260;
+    rrect(g, 471, 0, 18, y - 40, 0); shape(g, '#5c6067', 3);
+    imPiece(g, 480, y, 1, k < 0.45 ? '#ff8a2a' : '#8a8d91');
+    if (k > 0.38 && k < 0.85) { g.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 16; i++) { const ph = (t * 0.9 + i * 0.13) % 1; g.beginPath(); g.arc(340 + (i * 89 % 280) + Math.sin(ph * 8 + i) * 16, 310 - ph * 240, 16 + ph * 26, 0, 7); g.fill(); } }
+    rrect(g, 700, 130, 170, 70, 10); shape(g, '#14181a'); g.fillStyle = '#7dffa0'; g.font = '700 30px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(k < 0.45 ? '900 °C' : k < 0.7 ? '60 °C' : 'HRC 42', 785, 165);
+  }],
+  ['L’ébarbage et l’usinage', 'On retire les bavures, puis on usine les surfaces à la cote, au centième près.', (g, k, t) => {
+    rrect(g, 240, 380, 480, 60, 6); shape(g, '#3a3d42');
+    imPiece(g, 420, 325, 1, k > 0.75 ? '#c9d6e2' : '#8a8d91', Math.max(0, 1 - k * 1.5));
+    g.save(); g.translate(600, 300); g.rotate(t * 30); g.beginPath(); g.arc(0, 0, 72, 0, 7); shape(g, '#9aa0a6'); for (let i = 0; i < 8; i++) { g.rotate(0.785); g.beginPath(); g.moveTo(14, 0); g.lineTo(66, 0); stroke(g, 3); } g.beginPath(); g.arc(0, 0, 12, 0, 7); shape(g, '#2a1c14', 3); g.restore();
+    if (k < 0.8) imSparks(g, 530, 340, t * 2.2, 40, 1.8);
+    if (k > 0.75) { g.fillStyle = 'rgba(255,255,255,.7)'; g.save(); g.translate(300 + (k - 0.75) * 960, 325); g.rotate(0.4); g.fillRect(-8, -80, 16, 160); g.restore(); }
+    g.font = '700 26px Fredoka, sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; if (k > 0.5) g.fillText('Ø 50,00 ± 0,01', 420, 200);
+  }],
+  ['Le contrôle qualité', 'Ultrasons, mesures, essais : une pièce ne sort que si elle est conforme.', (g, k, t) => {
+    rrect(g, 170, 390, 340, 50, 6); shape(g, '#c9b8a0'); imPiece(g, 340, 340, 1, '#c9d6e2');
+    const px = 280 + Math.sin(k * 12) * 60; rrect(g, px - 12, 240, 24, 50, 5); shape(g, '#F5B700'); g.beginPath(); g.moveTo(px, 240); g.quadraticCurveTo(px + 60, 140, 560, 170); stroke(g, 4);
+    rrect(g, 540, 110, 300, 210, 12); shape(g, '#14181a'); g.strokeStyle = '#7dffa0'; g.lineWidth = 3; g.beginPath(); for (let x = 0; x <= 280; x += 4) { const pk = Math.exp(-((x - 60) ** 2) / 90) * 120 + Math.exp(-((x - 230) ** 2) / 90) * 70, v = 280 - pk - Math.sin(x * 0.7 + t * 24) * 5; x ? g.lineTo(550 + x, v) : g.moveTo(550, v); } g.stroke();
+    if (k > 0.72) { const s = 1 + Math.max(0, 0.9 - k) * 12; g.save(); g.translate(340, 300); g.rotate(-0.18); g.scale(s, s); rrect(g, -130, -38, 260, 76, 10); g.fillStyle = 'rgba(255,255,255,.9)'; g.fill(); g.lineWidth = 7; g.strokeStyle = '#2E9E5B'; g.stroke(); g.fillStyle = '#2E9E5B'; g.font = '700 42px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CONFORME', 0, 2); g.restore(); }
+  }],
+];
+
 function immersive(c, done) {
   const box = document.createElement('div'); box.className = 'imm'; box.dataset.overlay = '1';
   box.innerHTML = '<canvas width="960" height="540"></canvas><small>Touche l’écran pour passer</small>';
   $('.modal-box').appendChild(box);
   const cv = $('canvas', box), g = cv.getContext('2d'), W = 960, H = 540;
   const art = document.createElement('canvas'); paintCardArt(art, c);
-  const sparks = Array.from({ length: 160 }, () => ({ a: Math.random() * 6.283, z: Math.random(), s: 0.3 + Math.random() * 0.8 }));
   const ease = k => k * k * (3 - 2 * k), cl = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
-  [196, 247, 294, 392].forEach((f, i) => setTimeout(() => sfx(f, 1.4, 'sine', 0.035), i * 260));
-  let t = 0, over = false;
+  const T0 = 1.4, MOVE = 0.8, HOLD = 3.1, SEG = MOVE + HOLD, N = IM_STEPS.length, T1 = T0 + N * SEG, END = T1 + 5.2;
+  let t = 0, over = false, lastIdx = -1, lastHit = -1;
   const finish = () => { if (over) return; over = true; stop(); box.remove(); if (done) done(); };
   box.addEventListener('click', finish);
-  let boomed = false;
   const stop = loop(dt => {
     t += dt;
-    const fly = ease(cl(t, 1.2, 5)), pour = ease(cl(t, 4.6, 6.6)), flood = ease(cl(t, 5.8, 7.2)), flash = cl(t, 7, 7.3) * (1 - cl(t, 7.3, 8));
-    g.fillStyle = '#080506'; g.fillRect(0, 0, W, H);
-    // la halle défile : piliers et poutres qui passent de chaque côté, avec du relief
-    const ph = t * 0.55 + fly * 2;
-    for (let i = 9; i >= 0; i--) {
-      const z = 1 - ((i / 10 + ph) % 1), k = 1 / (z * z * 6 + 0.12), a = cl(1 - z, 0, 0.3);
-      g.globalAlpha = a; g.fillStyle = `rgb(${18 + 40 * (1 - z)},${10 + 16 * (1 - z)},${10})`;
-      const x = 170 * k, y = 120 * k;
-      g.fillRect(W / 2 - x - 16 * k, H / 2 - y, 22 * k, y * 2); g.fillRect(W / 2 + x - 6 * k, H / 2 - y, 22 * k, y * 2); g.fillRect(W / 2 - x, H / 2 - y - 8 * k, x * 2, 12 * k);
+    const tt = Math.max(0, t - T0), idx = Math.min(N - 1, Math.floor(tt / SEG)), loc = Math.min(SEG, tt - idx * SEG);
+    const k = loc < MOVE ? 0 : Math.min(1, (loc - MOVE) / HOLD), cam = (idx + (idx && loc < MOVE ? ease(loc / MOVE) - 1 : 0)) * W;
+    if (idx !== lastIdx) { lastIdx = idx; sfx(330 + idx * 44, 0.18, 'triangle', 0.04); }
+    if (idx === 6) { const n = Math.floor(k * 4); if (n !== lastHit) { lastHit = n; sfx(80, 0.25, 'square', 0.08, -30); } }
+    // la halle : brique, charpente et piliers qui défilent à des vitesses différentes
+    const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#2a1a1a'); sky.addColorStop(1, '#6a3a20'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 3; const bx = -(cam * 0.3) % 80; for (let y = 0; y < IM_FLOOR; y += 40) for (let x = bx - 80 + (y % 80 ? 40 : 0); x < W + 80; x += 80) g.strokeRect(x, y, 80, 40);
+    const px = -(cam * 0.6) % 480; g.fillStyle = 'rgba(0,0,0,.4)'; for (let x = px - 480; x < W + 480; x += 480) { g.fillRect(x, 0, 40, IM_FLOOR); g.beginPath(); g.moveTo(x, 40); g.lineTo(x + 240, 90); g.lineTo(x + 480, 40); g.lineTo(x + 480, 20); g.lineTo(x + 240, 70); g.lineTo(x, 20); g.fill(); }
+    g.fillStyle = '#3a3330'; g.fillRect(0, IM_FLOOR, W, H - IM_FLOOR); g.fillStyle = '#F5B700'; const st = -cam % 80; for (let x = st - 80; x < W; x += 80) g.fillRect(x, IM_FLOOR + 6, 40, 6);
+    for (let s = Math.max(0, idx - 1); s <= Math.min(N - 1, idx + 1); s++) { g.save(); g.translate(s * W - cam, 0); IM_STEPS[s][2](g, s < idx ? 1 : s > idx ? 0 : k, t); g.restore(); }
+    // le premier plan passe vite : on a l'impression d'avancer dans l'atelier
+    const fx = -(cam * 1.5) % 1400; g.fillStyle = 'rgba(10,6,4,.85)'; for (let x = fx - 1400; x < W + 1400; x += 1400) { g.beginPath(); g.moveTo(x, H); g.lineTo(x + 60, 300); g.lineTo(x + 170, 300); g.lineTo(x + 230, H); g.fill(); }
+    // nom du métier
+    if (t < T1 + 0.2) {
+      const [ti, fact] = IM_STEPS[idx], a = cl(loc, MOVE * 0.5, MOVE) * (1 - cl(loc, SEG - 0.3, SEG));
+      g.globalAlpha = a; g.fillStyle = 'rgba(251,243,224,.96)'; rrect(g, 24, 460, W - 48, 62, 12); g.fill(); stroke(g, 4);
+      g.fillStyle = INK; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '700 25px Fredoka, Archivo, sans-serif'; g.fillText(`${idx + 1}. ${ti}`, 42, 478); g.font = '600 16px Fredoka, Archivo, sans-serif'; g.fillText(fact, 42, 505, W - 84); g.globalAlpha = 1;
+      for (let i = 0; i < N; i++) { g.beginPath(); g.arc(W / 2 - (N - 1) * 11 + i * 22, 24, i === idx ? 8 : 5, 0, 7); g.fillStyle = i <= idx ? '#F5B700' : 'rgba(255,255,255,.3)'; g.fill(); }
     }
-    g.globalAlpha = 1;
-    const hg = g.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, 340); hg.addColorStop(0, `rgba(255,140,50,${0.25 + fly * 0.5})`); hg.addColorStop(1, 'rgba(255,90,20,0)'); g.fillStyle = hg; g.fillRect(0, 0, W, H);
-    // étincelles qui filent vers la caméra
-    g.fillStyle = '#ffd27a'; sparks.forEach(s => { s.z += s.s * dt * (0.4 + fly); if (s.z > 1) s.z = 0; const r = s.z * s.z * 620; const x = W / 2 + Math.cos(s.a) * r, y = H / 2 + Math.sin(s.a) * r * 0.7, z = 1 + s.z * 4; g.fillRect(x, y, z, z); });
-    // la poche géante s'avance, bascule et verse
-    const ls = 0.2 + fly * 0.95;
-    g.save(); g.translate(W / 2 - 60 * ls, H * 0.34); g.scale(ls * 2.1, ls * 2.1); g.rotate(pour * 0.8);
-    g.fillStyle = brass(g, -40, 40, '#2b2e33', '#7a7f87', '#1a1c20'); g.beginPath(); g.moveTo(-50, -38); g.lineTo(50, -38); g.lineTo(34, 44); g.lineTo(-34, 44); g.fill(); g.fillStyle = '#ffd27a'; g.fillRect(-46, -41, 92, 8); g.restore();
-    if (pour > 0) { const sg = g.createLinearGradient(W / 2 - 30, 0, W / 2 + 90, 0); sg.addColorStop(0, '#ff6a1a'); sg.addColorStop(0.5, '#fff6c8'); sg.addColorStop(1, '#ff6a1a'); g.fillStyle = sg; const w = 60 * pour; g.fillRect(W / 2 + 40 - w / 2 + Math.sin(t * 40) * 3, H * 0.28, w, H); }
-    if (flood > 0) { const fy = H * (1 - flood * 1.1); const fg = g.createLinearGradient(0, fy, 0, H); fg.addColorStop(0, '#fff6c8'); fg.addColorStop(0.1, '#ffb347'); fg.addColorStop(1, '#c8380c'); g.fillStyle = fg; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += 20) g.lineTo(x, fy + Math.sin(x * 0.02 + t * 7) * 14); g.lineTo(W, H); g.fill(); }
-    if (t > 7.1 && !boomed) { boomed = true; sfx(70, 0.9, 'sawtooth', 0.08, -20); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => sfx(f, 0.5, 'triangle', 0.05), i * 110)); }
-    // le médaillon de la promo sort du métal
-    const med = ease(cl(t, 7.2, 8.2)) * (1 - ease(cl(t, 9.6, 10.3)));
-    if (med > 0) {
-      g.save(); g.translate(W / 2, H / 2); g.globalAlpha = med;
-      for (let i = 0; i < 24; i++) { g.rotate(0.2618 + (i ? 0 : t * 0.25)); g.fillStyle = 'rgba(255,220,150,.13)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(700, -30); g.lineTo(700, 30); g.fill(); }
-      g.restore(); g.save(); g.translate(W / 2, H / 2); g.globalAlpha = med; g.scale(0.7 + med * 0.5, 0.7 + med * 0.5); SUBJECT.piece(g, METAL_PAL.Fonte);
-      g.fillStyle = '#3a1e06'; g.textAlign = 'center'; g.font = '900 54px "Big Shoulders Display", Impact'; g.fillText('ESFF', 0, 4); g.font = '900 34px "Big Shoulders Display", Impact'; g.fillText('102', 0, 40); g.restore();
+    // final : tous les métiers réunis
+    const fin = ease(cl(t, T1, T1 + 0.8)) * (1 - ease(cl(t, END - 1.6, END - 0.8)));
+    if (fin > 0) {
+      g.globalAlpha = fin; const bg = g.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, 620); bg.addColorStop(0, '#fff1a8'); bg.addColorStop(0.45, '#ff9a2a'); bg.addColorStop(1, '#6a1e0c'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      g.save(); g.translate(W / 2, 220); g.rotate(t * 0.15); for (let i = 0; i < 24; i++) { g.rotate(0.2618); g.fillStyle = 'rgba(255,240,170,.22)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(760, -32); g.lineTo(760, 32); g.fill(); } g.restore();
+      g.save(); g.translate(W / 2, 214); g.scale(1.25, 1.25); SUBJECT.piece(g, METAL_PAL.Fonte); g.fillStyle = '#3a1e06'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.font = '700 50px Fredoka, sans-serif'; g.fillText('ESFF', 0, 2); g.font = '700 32px Fredoka, sans-serif'; g.fillText('102', 0, 38); g.restore();
+      g.fillStyle = INK; g.font = '700 32px Fredoka, Archivo, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Fondre, mouler, couler, forger, contrôler', W / 2, 420); g.font = '600 21px Fredoka, Archivo, sans-serif'; g.fillText('Tout le savoir-faire de la fonderie et de la forge', W / 2, 462);
       g.globalAlpha = 1;
     }
-    if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash})`; g.fillRect(0, 0, W, H); }
-    // la carte au début et à la fin
-    const open = 1 - ease(cl(t, 0.5, 1.5)), back = ease(cl(t, 10, 11));
-    const a = Math.max(open, back);
-    if (a > 0) { const s = 0.62 + (1 - a) * 3.2, ch = H * s, cw = ch * 5 / 7; g.globalAlpha = Math.min(1, a * 1.6); g.drawImage(art, W / 2 - cw / 2, H / 2 - ch / 2, cw, ch); g.globalAlpha = 1; }
-    if (t > 11.2) { finish(); return false; }
+    // entrée dans la carte et retour à la carte
+    const a = Math.max(1 - ease(cl(t, 0.5, 1.4)), ease(cl(t, END - 1.2, END - 0.2)));
+    if (a > 0) { const s = 0.9 + (1 - a) * 3.4, ch = H * s, cw = ch * 5 / 7; g.globalAlpha = Math.min(1, a * 1.5); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.drawImage(art, W / 2 - cw / 2, H / 2 - ch / 2, cw, ch); g.globalAlpha = 1; }
+    if (t > END) { finish(); return false; }
   });
 }
 
