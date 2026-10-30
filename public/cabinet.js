@@ -10,6 +10,9 @@ const MENU = [
   { sep: 'SOLO' },
   ...[...GAMES].sort((a, b) => SOLO_ORDER.indexOf(a.id) - SOLO_ORDER.indexOf(b.id))
     .map(gm => ({ id: gm.id, kind: 'solo', title: gm.title, tone: toneOf(gm), tag: SOLO_TAGS[gm.id] || `TEINTE ${TONES[gm.teinte].name.toUpperCase()}`, pitch: gm.pitch })),
+  { sep: 'COLLECTION' },
+  { id: 'boosters', kind: 'extra', title: 'Boosters ESFF', tone: '#C77DFF', tag: '102 CARTES', pitch: 'Ouvre des boosters et complète la collection ESFF : 102 cartes d\'entreprises de la fonderie et de la forge, de la commune à la secrète.' },
+  { id: 'secrets', kind: 'extra', title: 'Les Secrets de l\'École', tone: '#7FD48A', tag: '50 SECRETS', pitch: 'Gratte des tickets et perce les 50 secrets de Captain Obvious : des révélations que personne n\'aurait pu deviner.' },
   { sep: 'BORNE' },
   { id: 'tickets', kind: 'panel', title: 'Mes tickets', tone: '#F5B700', tag: '-10 %', pitch: 'Gratte le sable du moule : 1 ticket sur 5 cache un code de -10 % pour la boutique de la promo.' },
   { id: 'scores', kind: 'panel', title: 'Classement', tone: '#7fd4ff', tag: 'HI-SCORES', pitch: 'Les meilleurs fondeurs de la promo, jeu par jeu. Ton pseudo y apparaît dès ta première partie.' },
@@ -49,6 +52,7 @@ function select(i, scroll = true) {
 function ruleFor(it) {
   if (!server) return '<span class="rule">Serveur requis pour les tickets</span>';
   if (it.kind === 'panel') return it.id === 'tickets' ? `<span class="rule">${server.tickets} ticket(s) à gratter</span>` : '';
+  if (it.kind === 'extra') return '<span class="rule">3 gratuits par jour, +1 par ticket gagné</span>';
   const left = server.left[it.id];
   if (left === 0) return '<span class="rule done">✔ Tickets du jour gagnés</span>';
   if (it.kind === 'online') return '<span class="rule">🎟️ Finir = 1 · Gagner = 2</span>';
@@ -71,7 +75,7 @@ function renderPreview() {
       <p>${esc(it.pitch)}</p>
       <div class="pv-meta">${ruleFor(it)}${best ? `<span class="rec">Record : ${best}${it.id === 'quiz' ? '/10' : it.id === 'usine' ? ' k€ créés' : ''}</span>` : ''}</div>
       <div class="pv-go"><button class="btn btn-hot" id="pvGo">${it.kind === 'panel' ? 'Ouvrir' : 'Jouer'} ▶</button>
-      ${it.kind !== 'panel' ? '<button class="btn btn-ghost" id="pvScores">Classement</button>' : ''}
+      ${it.kind !== 'panel' && it.kind !== 'extra' ? '<button class="btn btn-ghost" id="pvScores">Classement</button>' : ''}
       ${it.id === 'tekken' ? '<button class="btn btn-ghost" id="pvCombos">📖 Combos et ultimes</button>' : ''}</div>
     </div>`;
   $('#pvGo').addEventListener('click', () => launch(it));
@@ -82,6 +86,7 @@ function renderPreview() {
 
 /* Illustrations animées du menu (mode « attract ») */
 function paintArt(box, it) {
+  if (it.kind === 'extra') return collectArt(box, it);
   if (it.id === 'fighter') {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);
     const g = cv.getContext('2d');
@@ -236,6 +241,7 @@ function launch(it) {
   if (previewStop) { previewStop(); previewStop = null; }
   if (it.kind === 'online') openOnline(it.id);
   else if (it.kind === 'solo') openGame(it.id);
+  else if (it.kind === 'extra') openCollect(it.id);
   else openPanel(it.id);
 }
 

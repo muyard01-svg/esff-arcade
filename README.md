@@ -176,6 +176,14 @@ Course de karts en 3D façon « party kart » avec les six persos de la métallu
 
 Combat aérien en 3D au-dessus de la vallée des fonderies, chacun pour soi pendant 3 minutes ou jusqu'à 12 victoires. Vue **3e personne** derrière l'avion ou **cockpit** avec viseur tête haute (**V**). Pilotage arcade : ← → virer, ↑ / ↓ monter et piquer, **Maj** postcombustion, **C** freins. **Espace / J** canon, **K** missile : garder la cible dans le losange pour la verrouiller (« VERROUILLÉ »), sinon le missile part tout droit. **L** leurres pour décrocher un missile (alerte « MISSILE » et bips). Radar, marqueurs de cible, alertes « REMONTE ! » et sortie de zone. On réapparaît 3 secondes après avoir été abattu, protégé 2 secondes.
 
+### Les Secrets de l'École
+
+Tickets à gratter sans enjeu de code promo : 3 gratuits par jour, plus 1 par ticket gagné dans un jeu. 7 tickets sur 10 cachent l'un des 50 secrets de Captain Obvious (`secrets_data.py`), rangés dans un carnet. Aucun secret ne vise une vraie personne : le site est public.
+
+### Boosters ESFF
+
+Collection de 102 cartes (`cards_data.py`) : 60 communes, 22 rares, 10 super rares, 5 alternatives, 4 légendaires et 1 secrète. Les personnages sont des entreprises de l'annuaire AAESFF (fonderie-piwi.fr) ; nom, ville, secteur et métal viennent de l'annuaire, PV et attaque sont fictifs, les illustrations sont dessinées par `public/collect.js` sans logo (`HERO` et `SUBJECT` pour retravailler les cartes de prestige). 3 boosters gratuits par jour, plus 1 par ticket gagné. Chaque booster contient 5 cartes, tirées par le serveur, avec au plus 12 boosters d'affilée sans alternative, légendaire ou secrète. La carte secrète lance une animation immersive.
+
 ## Classement
 
 Chaque joueur choisit un pseudo à sa première visite. Le menu « Classement » affiche les 10 meilleurs scores de chaque jeu solo et le nombre de victoires dans chaque jeu en ligne. Les scores solo sont envoyés par le navigateur ; un joueur malin peut donc tricher sur le classement, mais pas sur le code promo.
@@ -209,5 +217,6 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
   - `tekken3d.js` : arène et personnages 3D (three.js chargé à la demande)
   - `brawl.js` : Forge Fighters (pantins désarticulés) ; `fighter.js` : personnages 2D des aperçus ; `planes.js` : combat aérien 3D
   - `atelier.js` : l'Atelier de Coulée 3D (vues, guidage) ; `moulage.js` : le Moulage 3D
+  - `collect.js` : Secrets de l'École et Boosters ESFF
   - `galaxie.js` : Coulée Galactique (3D)
   - `usine.js`, `usine-data.js` : Usine 102 et ses données réelles

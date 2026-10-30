@@ -998,9 +998,6 @@ $('#scratchBtn').addEventListener('click', async () => {
 });
 
 function setupScratch(r) {
-  scratchResult.innerHTML = r.win
-    ? `<span class="scratch-tag">Pièce saine !</span><strong>-10 %</strong><code>${esc(r.code)}</code><small>à saisir sur esff2027.shop</small>`
-    : `<span class="scratch-tag">Pièce rebutée</span><strong>Perdu</strong><small>Rejoue pour gagner un autre ticket.</small>`;
   scratchCard.classList.remove('idle', 'win', 'lose');
   scratchCard.classList.add('live');
   $('#scratchHint').textContent = 'Gratte le sable avec ton doigt ou ta souris.';
@@ -1009,6 +1006,7 @@ function setupScratch(r) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const W = cv.clientWidth, H = cv.clientHeight;
   cv.width = W * dpr; cv.height = H * dpr;
+  cv.style.transition = 'none';     // le sable est là tout de suite : aucun fondu qui laisserait lire le résultat
   cv.style.opacity = '1';
   const g = cv.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1027,6 +1025,10 @@ function setupScratch(r) {
   g.font = `600 14px Archivo, sans-serif`;
   g.fillText('1 chance sur 5 de gagner -10 %', W / 2, H / 2 + 20);
   g.globalCompositeOperation = 'destination-out';
+  // le résultat n'est écrit dans la page qu'une fois le sable peint
+  scratchResult.innerHTML = r.win
+    ? `<span class="scratch-tag">Pièce saine !</span><strong>-10 %</strong><code>${esc(r.code)}</code><small>à saisir sur esff2027.shop</small>`
+    : `<span class="scratch-tag">Pièce rebutée</span><strong>Perdu</strong><small>Rejoue pour gagner un autre ticket.</small>`;
 
   let down = false, last = null, strokes = 0, done = false;
   const pt = e => { const b = cv.getBoundingClientRect(); return { x: (e.clientX - b.left) / b.width * W, y: (e.clientY - b.top) / b.height * H }; };
@@ -1045,6 +1047,7 @@ function setupScratch(r) {
   const reveal = () => {
     if (done) return;
     done = true;
+    cv.style.transition = '';
     cv.style.opacity = '0';
     scratchCard.classList.remove('live');
     scratchCard.classList.add(r.win ? 'win' : 'lose');

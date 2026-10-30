@@ -19,6 +19,8 @@ from pathlib import Path
 from aiohttp import web, WSMsgType
 
 from brawl import Brawl
+from cards_data import CARDS
+from secrets_data import SECRETS
 from forgeopoly import Forgeopoly
 from planes import Dogfight
 from kart import Kart
@@ -75,6 +77,10 @@ def init_db():
             create table if not exists scores(player text, game text, score integer, ts real);
             create index if not exists scores_game on scores(game);
             create table if not exists wins(player text, game text, n integer, primary key(player, game));
+            create table if not exists secret_draws(id integer primary key autoincrement, player text, day text, secret integer);
+            create table if not exists booster_opens(id integer primary key autoincrement, player text, day text, ts real);
+            create table if not exists card_owned(player text, card integer, n integer, primary key(player, card));
+            create table if not exists card_pity(player text primary key, n integer);
         ''')
         cols = [r[1] for r in con.execute('pragma table_info(players)')]
         if 'name' not in cols:
@@ -261,6 +267,96 @@ async def api_scratch(request):
             return web.json_response({'error': "Tu n'as pas de ticket à gratter."}, status=400)
         con.execute('update tickets set scratched=?, win=? where id=?', (time.time(), int(win), row['id']))
     return web.json_response({'win': win, 'code': PROMO_CODE if win else None, **status(player)})
+
+
+# ---------------- Secrets à gratter et boosters de cartes ----------------
+FREE_DAY = int(os.environ.get('ESFF_FREE_DAY', '3'))    # gratuits par jour, plus 1 par ticket gagné dans la journée
+SECRET_RATE = 0.7
+CARDS_BY = {}
+for c in CARDS:
+    CARDS_BY.setdefault(c['r'], []).append(c['id'])
+# tirage par emplacement du booster : les 3 premières cartes, la 4e, puis la carte « chance »
+SLOT_ODDS = [
+    [('commun', 82), ('rare', 18)], [('commun', 82), ('rare', 18)], [('commun', 82), ('rare', 18)],
+    [('rare', 72), ('super', 28)],
+    [('rare', 50), ('super', 31), ('alternative', 13), ('legendaire', 5), ('secrete', 1)],
+]
+PITY = 12         # au plus 12 boosters d'affilée sans alternative, légendaire ou secrète
+HITS = ('alternative', 'legendaire', 'secrete')
+
+
+def daily_left(con, player, table):
+    today = date.today().isoformat()
+    used = con.execute(f'select count(*) from {table} where player=? and day=?', (player, today)).fetchone()[0]
+    earned = con.execute('select count(*) from tickets where player=? and day=?', (player, today)).fetchone()[0]
+    return max(0, FREE_DAY + earned - used)
+
+
+async def api_secrets(request):
+    data = await read_json(request)
+    player = data.get('player')
+    if not known_player(player):
+        return web.json_response({'error': 'Requête invalide'}, status=400)
+    with db() as con:
+        ids = [r[0] for r in con.execute('select distinct secret from secret_draws where player=? and secret>=0 order by id', (player,))]
+        left = daily_left(con, player, 'secret_draws')
+    return web.json_response({'left': left, 'total': len(SECRETS), 'owned': [{'id': i, 'text': SECRETS[i]} for i in ids if i < len(SECRETS)]})
+
+
+async def api_secret_draw(request):
+    data = await read_json(request)
+    player = data.get('player')
+    if not known_player(player):
+        return web.json_response({'error': 'Requête invalide'}, status=400)
+    with db() as con:
+        if daily_left(con, player, 'secret_draws') <= 0:
+            return web.json_response({'error': 'Plus de ticket secret pour aujourd\'hui : gagne un ticket dans un jeu ou reviens demain.'}, status=400)
+        owned = {r[0] for r in con.execute('select secret from secret_draws where player=?', (player,))}
+        todo = [i for i in range(len(SECRETS)) if i not in owned]
+        sid = random.choice(todo) if todo and random.random() < SECRET_RATE else -1
+        con.execute('insert into secret_draws(player, day, secret) values(?,?,?)', (player, date.today().isoformat(), sid))
+        left = daily_left(con, player, 'secret_draws')
+    return web.json_response({'win': sid >= 0, 'secret': {'id': sid, 'text': SECRETS[sid]} if sid >= 0 else None, 'left': left, 'done': not todo})
+
+
+def owned_cards(con, player):
+    return {r['card']: r['n'] for r in con.execute('select card, n from card_owned where player=?', (player,))}
+
+
+async def api_cards(request):
+    data = await read_json(request)
+    player = data.get('player')
+    if not known_player(player):
+        return web.json_response({'error': 'Requête invalide'}, status=400)
+    with db() as con:
+        return web.json_response({'set': CARDS, 'owned': owned_cards(con, player), 'left': daily_left(con, player, 'booster_opens')})
+
+
+async def api_booster(request):
+    data = await read_json(request)
+    player = data.get('player')
+    if not known_player(player):
+        return web.json_response({'error': 'Requête invalide'}, status=400)
+    with db() as con:
+        if daily_left(con, player, 'booster_opens') <= 0:
+            return web.json_response({'error': 'Plus de booster pour aujourd\'hui : gagne un ticket dans un jeu ou reviens demain.'}, status=400)
+        row = con.execute('select n from card_pity where player=?', (player,)).fetchone()
+        pity = row[0] if row else 0
+        drawn = []
+        for k, odds in enumerate(SLOT_ODDS):
+            rar = random.choices([o[0] for o in odds], [o[1] for o in odds])[0]
+            if k == 4 and pity + 1 >= PITY and rar not in HITS:
+                rar = random.choices(HITS, (75, 22, 3))[0]
+            pool = [i for i in CARDS_BY[rar] if i not in drawn] or CARDS_BY[rar]
+            drawn.append(random.choice(pool))
+        got = {c['id']: c['r'] for c in CARDS if c['id'] in drawn}
+        pity = 0 if any(got[i] in HITS for i in drawn) else pity + 1
+        before = owned_cards(con, player)
+        for i in drawn:
+            con.execute('insert into card_owned(player, card, n) values(?,?,1) on conflict(player, card) do update set n=n+1', (player, i))
+        con.execute('insert into card_pity(player, n) values(?,?) on conflict(player) do update set n=excluded.n', (player, pity))
+        con.execute('insert into booster_opens(player, day, ts) values(?,?,?)', (player, date.today().isoformat(), time.time()))
+        return web.json_response({'cards': drawn, 'isNew': [i not in before for i in drawn], 'owned': owned_cards(con, player), 'left': daily_left(con, player, 'booster_opens')})
 
 
 # ---------------- Salons en ligne ----------------
@@ -527,6 +623,10 @@ def build_app():
     app.router.add_get('/api/quiz', api_quiz)
     app.router.add_post('/api/quiz', api_quiz_answer)
     app.router.add_post('/api/scratch', api_scratch)
+    app.router.add_post('/api/secrets', api_secrets)
+    app.router.add_post('/api/secret/draw', api_secret_draw)
+    app.router.add_post('/api/cards', api_cards)
+    app.router.add_post('/api/booster', api_booster)
     app.router.add_get('/ws', ws_handler)
     app.router.add_static('/', PUBLIC)
     app.on_response_prepare.append(no_cache)
