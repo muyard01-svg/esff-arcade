@@ -34,6 +34,7 @@ const HANDLERS = {
 function stopClients() {
   if (typeof stopKart === 'function') stopKart();
   if (typeof stopAtelier === 'function') stopAtelier();
+  if (typeof stopTactique === 'function') stopTactique();
   if (typeof stopFighter === 'function') stopFighter();
   if (typeof stopPlanes === 'function') stopPlanes();
   if (typeof stopTekken === 'function') stopTekken();

@@ -86,6 +86,7 @@ function renderPreview() {
 
 /* Illustrations animées du menu (mode « attract ») */
 function paintArt(box, it) {
+  if (it.id === 'tactique') { box.innerHTML = '<span class="quiz-art" style="color:#C77DFF">FT</span>'; return null; }
   if (it.kind === 'extra') return collectArt(box, it);
   if (it.id === 'fighter') {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 300; box.appendChild(cv);

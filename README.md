@@ -188,6 +188,12 @@ Nom, ville, secteur et métal viennent de l'annuaire. La rareté est une estimat
 
 Les boosters sont gratuits et illimités, sans ticket. Chaque booster contient 5 cartes, tirées par le serveur, avec au plus 12 boosters d'affilée sans alternative, légendaire ou secrète. Les cartes de la première collection sont reprises automatiquement, sauf celles des fournisseurs, retirés de la collection.
 
+### Forge Tactique
+
+Auto-battler à 8 (robots en renfort en partie rapide) sur les métiers de la métallurgie, avec un contenu original (`tactique.py`, `public/tactique.js`). 56 unités : un métier représentatif par rareté (commun, rare, épique, légendaire) dans chacun des 14 corps de métier. La rareté suit la difficulté de recrutement et la spécialisation : ce n'est ni un classement officiel ni un jugement sur la valeur des métiers.
+
+Chaque manche : 30 secondes pour recruter dans la boutique commune, placer l'équipe et acheter de l'XP, puis le combat se joue seul. 3 exemplaires identiques fusionnent en une étoile de plus, 2, 4 ou 6 unités différentes d'un corps de métier donnent une synergie. Le perdant perd des PV, le dernier atelier debout gagne.
+
 ## Classement
 
 Chaque joueur choisit un pseudo à sa première visite. Le menu « Classement » affiche les 10 meilleurs scores de chaque jeu solo et le nombre de victoires dans chaque jeu en ligne. Les scores solo sont envoyés par le navigateur ; un joueur malin peut donc tricher sur le classement, mais pas sur le code promo.
@@ -205,6 +211,7 @@ Il faut un hébergeur capable de faire tourner Python et les WebSockets, par exe
 - `combos.py` : combos nommés de Poing de Fonte 3D
 - `planes.py` : moteur du combat aérien 3D (vol, canon, missiles, leurres, robots)
 - `forgeopoly.py` : règles complètes du jeu de plateau (et robots qui achètent, construisent et négocient)
+- `tactique.py` : Forge Tactique (boutique, synergies, combats, robots)
 - `kart.py` : Grand Prix en karts (circuits, objets, robots, classement)
 - `atelier.py` : l'Atelier de Coulée en coopération (ligne DISA, four à induction, petite / grande série, apprentis robots)
 - `quiz_data.py` : questions du quiz (la première réponse de chaque liste est la bonne)
