@@ -6,7 +6,7 @@
 ONLINE.push({
   id: 'tactique', title: 'Forge Tactique', tone: '#C77DFF', label: 'Stratégie auto · 2 à 8 joueurs', tag: 'TACTIQUE 2-8',
   pitch: 'Recrute les métiers de la métallurgie, combine leurs familles, équipe-les d’objets pris sur les monstres et regarde ton atelier se battre tout seul. Le dernier debout gagne.',
-  how: '<b>Clic</b> sur une carte pour recruter · <b>glisse</b> une unité pour la placer, sur la boutique pour la vendre · 3 exemplaires identiques fusionnent · chaque unité a 2 ou 3 familles : réunis-en plusieurs pour les combos · les manches de monstres donnent des objets : clique un objet, puis une unité. La rareté suit la difficulté de recrutement et la spécialisation : ce n’est pas un jugement sur la valeur des métiers.',
+  how: '<b>Clic</b> sur une carte ou touches <b>1 à 5</b> pour recruter · <b>R</b> actualiser · <b>X</b> acheter de l\u2019XP · <b>Espace</b> prêt · <b>glisse</b> une unité pour la placer, sur la boutique pour la vendre (ou <b>E</b> au survol) · 3 exemplaires identiques fusionnent · chaque unité a 2 ou 3 familles : réunis-en plusieurs pour les combos · les manches de monstres donnent des objets : clique un objet, puis une unité. La rareté suit la difficulté de recrutement et la spécialisation : ce n’est pas un jugement sur la valeur des métiers.',
 });
 HANDLERS.tactique = () => updateTactique();
 
@@ -96,6 +96,10 @@ function startTactiqueClient() {
   };
   stage.innerHTML = '';
   $('#hudInfo').textContent = 'Le dernier atelier debout gagne';
+  const wasFull = fxIsFull();
+  document.body.classList.add('ft-play');
+  if (!wasFull) document.body.classList.add('pseudo-fs');
+  fxPaintFsBtn();
   const wrap = document.createElement('div'); wrap.className = 'play-wrap'; stage.appendChild(wrap);
   const screen = document.createElement('div'); screen.className = 'tk-screen'; wrap.appendChild(screen);
   const { c: hud, g } = makeCanvas(screen, W, H); hud.classList.add('tk-hud'); hud.style.touchAction = 'none';
@@ -105,16 +109,16 @@ function startTactiqueClient() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.outputEncoding = THREE.sRGBEncoding;
   const canvas = renderer.domElement; canvas.className = 'tk-3d'; canvas.dataset.overlay = '1'; screen.insertBefore(canvas, hud);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#17110d');
-  const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 80); cam.position.set(0, 15, 12.8); cam.lookAt(0, 0, 3.1);
-  scene.add(new THREE.HemisphereLight('#fff4e0', '#4a2a14', 0.95));
-  const sun = new THREE.DirectionalLight('#fff0dc', 0.75); sun.position.set(-5, 12, 8); scene.add(sun);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#3a3028');
+  const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 80); cam.position.set(0, 14.2, 12); cam.lookAt(0, 0, 2.9);
+  scene.add(new THREE.HemisphereLight('#fff8ec', '#8a6a4a', 1.5));
+  const sun = new THREE.DirectionalLight('#fff0dc', 1.1); sun.position.set(-5, 12, 8); scene.add(sun);
   const M = (color, x) => { const m = new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...(x || {}) }); m.color.convertSRGBToLinear(); return m; };
   const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); scene.add(m); return m; };
-  box(10.4, 0.5, 13.6, M('#2b2420'), 0, -0.45, 0.9);
-  const tileA = M('#5a4a3c'), tileB = M('#4a3c30'), foeA = M('#4a3234'), foeB = M('#3e2a2c');
+  box(10.4, 0.5, 13.6, M('#5a4c40'), 0, -0.45, 0.9);
+  const tileA = M('#d8c4a0'), tileB = M('#b8a07c'), foeA = M('#b88a80'), foeB = M('#9a6e66');
   for (let c = 0; c < 7; c++) for (let r = 0; r < 8; r++) box(0.96, 0.2, 0.96, r >= 4 ? ((c + r) % 2 ? tileA : tileB) : ((c + r) % 2 ? foeA : foeB), c - 3, -0.1, r - 3.5);
-  for (let k = 0; k < 9; k++) box(0.92, 0.14, 0.92, M('#3a2e26'), k - 4, -0.08, 5.15);
+  for (let k = 0; k < 9; k++) box(0.92, 0.14, 0.92, M('#8a9aa8'), k - 4, -0.08, 5.15);
   const lava = M('#ff7a2a', { emissive: '#c8400c', emissiveIntensity: 1 }); [-5.1, 5.1].forEach(x => box(0.45, 0.2, 13, lava, x, -0.25, 0.9));
   [[-6.6, -3], [6.6, -3], [-6.6, 3], [6.6, 3]].forEach(([x, z]) => { box(1.3, 2.4 + Math.abs(z) * 0.3, 1.3, M('#6a3a2a'), x, 1, z); box(1.5, 0.3, 1.5, M('#3a3d42'), x, 2.4 + Math.abs(z) * 0.15, z); });
   const glow = new THREE.PointLight('#ff7a2a', 1.1, 22, 1.6); glow.position.set(0, 4, -7); scene.add(glow);
@@ -139,7 +143,7 @@ function startTactiqueClient() {
   const drop = o => { scene.remove(o); o.userData.m.dispose(); };
 
   /* ---------- état ---------- */
-  let cur = null, recvAt = 0, combatRound = 0, combatAt = 0, drag = null, selItem = null, info = null, seenHit = 0, floats = [], shots = [], lunges = {}, mouse = { x: 0, y: 0 }, fightKey = '';
+  let hoverSpot = null, cur = null, recvAt = 0, combatRound = 0, combatAt = 0, drag = null, selItem = null, info = null, seenHit = 0, floats = [], shots = [], lunges = {}, mouse = { x: 0, y: 0 }, fightKey = '';
   const shown = new Map(); let fightFig = [];
   const me = () => cur.p[mySeat], act = (a, o = {}) => send({ t: 'act', a, ...o });
   const worldOf = s => s[0] === 'b' ? [s[1] - 3, s[2] + 0.5] : [s[1] - 4, 5.15];
@@ -186,19 +190,37 @@ function startTactiqueClient() {
       <div class="ft-items">${p.items.map((id, i) => `<button class="ft-itb ${selItem === i ? 'on' : ''}" data-item="${i}" title="${esc(IT[id].n)} : ${esc(IT[id].d)}">${itemChip(id)}</button>`).join('')}</div>
       <div class="ft-bot">
         <div class="ft-eco"><b>${p.gold} or</b><small>Niveau ${p.lv} · ${p.board.length}/${p.lv}${p.lv < 9 ? ` · XP ${p.xp}/${D.xp[p.lv]}` : ''}</small>
-          <button data-do="roll" ${prep && p.gold >= 2 ? '' : 'disabled'}>Actualiser · 2</button><button data-do="xp" ${prep && p.gold >= 4 && p.lv < 9 ? '' : 'disabled'}>XP · 4</button></div>
-        <div class="ft-shop" id="ftShop">${p.shop.map((id, i) => id === null ? '<div class="ft-card off"></div>' : `<button class="ft-card" data-buy="${i}" data-u="${id}" style="--c:${TIER[U[id].tier]}" ${prep && p.gold >= U[id].cost ? '' : 'disabled'}><img src="${portrait(id)}" alt=""><b>${esc(U[id].n)}</b><small>${U[id].tr.map(t => esc(T[t].n)).join(' · ')}</small><em>${U[id].cost}</em></button>`).join('')}</div>
-        <button class="ft-ready" data-do="skip" ${p.ready ? 'disabled' : ''}>${prep ? (p.ready ? 'Prêt ✓' : 'Prêt') : 'Passer'}</button></div>
-      ${prep && p.loot.length ? `<div class="ft-loot"><h4>Butin : choisis un objet</h4><div>${p.loot.map((id, i) => `<button data-loot="${i}">${itemChip(id)}<b>${esc(IT[id].n)}</b><small>${esc(IT[id].d)}</small></button>`).join('')}</div></div>` : ''}
+          <button data-do="roll" ${prep && p.gold >= 2 ? '' : 'disabled'}>Actualiser · 2 or <kbd>R</kbd></button><button data-do="xp" ${prep && p.gold >= 4 && p.lv < 9 ? '' : 'disabled'}>XP · 4 or <kbd>X</kbd></button></div>
+        <div class="ft-shop" id="ftShop">${p.shop.map((id, i) => id === null ? '<div class="ft-card off"></div>' : `<button class="ft-card" data-buy="${i}" data-u="${id}" style="--c:${TIER[U[id].tier]}" ${prep && p.gold >= U[id].cost ? '' : 'disabled'}><img src="${portrait(id)}" alt=""><b>${esc(U[id].n)}</b><small>${U[id].tr.map(t => esc(T[t].n)).join(' · ')}</small><em>${U[id].cost}</em><kbd>${i + 1}</kbd></button>`).join('')}</div>
+        <button class="ft-ready" data-do="skip" ${p.ready ? 'disabled' : ''}>${prep ? (p.ready ? 'Prêt ✓' : 'Prêt') : 'Passer'}<kbd>Espace</kbd></button></div>
+      ${prep && p.loot.length ? `<div class="ft-loot"><h4>Butin : choisis un objet</h4><div>${p.loot.map((id, i) => `<button data-loot="${i}">${itemChip(id)}<b>${esc(IT[id].n)}</b><small>${esc(IT[id].d)}</small><kbd>${i + 1}</kbd></button>`).join('')}</div></div>` : ''}
       ${selItem !== null ? '<div class="ft-hint">Clique maintenant une unité pour l’équiper</div>' : ''}${!p.hp ? '<div class="ft-hint">Atelier fermé : tu regardes la fin</div>' : ''}`;
   }
-  ui.addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.do) { act(b.dataset.do); SFX.tick(); }
-    else if (b.dataset.buy) { act('buy', { i: +b.dataset.buy }); sfx(700, 0.06, 'triangle', 0.04); }
+  const doBuy = i => { const id = me().shop[i]; if (cur.phase === 'prep' && id !== null && id !== undefined && me().gold >= U[id].cost) { act('buy', { i }); sfx(700, 0.06, 'triangle', 0.04); } };
+  const doRoll = () => { if (cur.phase === 'prep' && me().gold >= 2) { act('roll'); SFX.tick(); } };
+  const doXp = () => { if (cur.phase === 'prep' && me().gold >= 4 && me().lv < 9) { act('xp'); SFX.tick(); } };
+  ui.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    e.preventDefault();
+    if (b.dataset.do === 'roll') doRoll();
+    else if (b.dataset.do === 'xp') doXp();
+    else if (b.dataset.do) { act(b.dataset.do); SFX.tick(); }
+    else if (b.dataset.buy) doBuy(+b.dataset.buy);
     else if (b.dataset.loot) { act('loot', { i: +b.dataset.loot }); SFX.good(); }
     else if (b.dataset.item) { selItem = selItem === +b.dataset.item ? null : +b.dataset.item; renderUI(); }
   });
+  // clavier, et boutons A, B, C de la borne
+  const kd = e => {
+    if (e.repeat || !cur || (e.target.matches && e.target.matches('input, textarea'))) return;
+    const p = me(), c = e.code, n = /^(Digit|Numpad)([1-5])$/.exec(c);
+    if (n) { e.preventDefault(); const i = +n[2] - 1; if (p.loot.length) { if (i < p.loot.length) { act('loot', { i }); SFX.good(); } } else doBuy(i); }
+    else if (c === 'KeyR' || c === 'KeyK') { e.preventDefault(); doRoll(); }
+    else if (c === 'KeyX' || c === 'KeyL') { e.preventDefault(); doXp(); }
+    else if (c === 'Space' || c === 'KeyJ') { e.preventDefault(); act('skip'); SFX.tick(); }
+    else if (c === 'KeyE' && hoverSpot && cur.phase === 'prep' && unitAt(hoverSpot)) { e.preventDefault(); act('sell', { b: hoverSpot }); sfx(300, 0.08, 'triangle', 0.04); }
+    else if (c === 'Escape' && selItem !== null) { e.stopPropagation(); selItem = null; renderUI(); }
+  };
+  window.addEventListener('keydown', kd, true);
   const showInfo = html => { const el = $('#ftInfo', ui); if (!el) return; el.hidden = !html; if (html) el.innerHTML = html; };
   ui.addEventListener('pointerover', e => {
     const c = e.target.closest('[data-u]'), t = e.target.closest('[data-tr]');
@@ -214,7 +236,7 @@ function startTactiqueClient() {
   });
   hud.addEventListener('pointermove', e => {
     if (!cur) return; const r = hud.getBoundingClientRect(); mouse = { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-    const w = toWorld(e); if (w) mouse.w = w; const s = cellOf(w);
+    const w = toWorld(e); if (w) mouse.w = w; const s = cellOf(w); hoverSpot = s;
     hoverTile.visible = !!(drag && s); if (s) { const [x, z] = worldOf(s); hoverTile.position.x = x; hoverTile.position.z = z; }
     if (!drag && cur.phase === 'prep') { const u = s && unitAt(s); showInfo(u ? unitTip(u[0], u[1], u[2]) : ''); }
   });
@@ -297,5 +319,5 @@ function startTactiqueClient() {
     const left = Math.max(0, Math.ceil(cur.left - (now - recvAt) / 1000)), el = $('#ftTime', ui); if (el && el.textContent !== `${left} s`) el.textContent = `${left} s`;
     renderer.render(scene, cam);
   });
-  return { push, stop() { stop(); clearFight(); shown.forEach(o => drop(o.fig)); renderer.dispose(); scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } };
+  return { push, stop() { stop(); window.removeEventListener('keydown', kd, true); document.body.classList.remove('ft-play'); if (!wasFull) document.body.classList.remove('pseudo-fs'); fxPaintFsBtn(); clearFight(); shown.forEach(o => drop(o.fig)); renderer.dispose(); scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } };
 }

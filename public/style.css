@@ -893,20 +893,25 @@ body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min
 .imm small { position: absolute; bottom: 8px; color: rgba(255,255,255,.5); font-size: 10px; }
 
 /* ---------- Forge Tactique ---------- */
-.ft { position: absolute; inset: 0; container-type: size; pointer-events: none; color: #f2eadc; font-family: Fredoka, Archivo, sans-serif; }
+body.ft-play .crt-scan, body.ft-play .crt-vignette { display: none; }
+body.ft-play .stage { padding: 0; }
+.ft kbd { position: absolute; left: .3cqw; bottom: .2cqh; padding: 0 .35cqw; background: #2a1c14; color: #ffd27a; font: 600 1.05cqw Fredoka, sans-serif; border-radius: 3px; }
+.ft-eco button, .ft-ready { position: relative; }
+.ft-eco kbd { left: auto; right: .3cqw; top: 50%; bottom: auto; transform: translateY(-50%); }
+.ft { z-index: 2; line-height: 1.2; position: absolute; inset: 0; container-type: size; pointer-events: none; color: #f2eadc; font-family: Fredoka, Archivo, sans-serif; }
 .ft button, .ft-left, .ft-loot { pointer-events: auto; }
 .ft-top { position: absolute; top: 1cqh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 1.4cqw; padding: .8cqh 1.6cqw; background: rgba(20,14,10,.86); border: 2px solid #5a4a3c; font-size: 1.8cqw; white-space: nowrap; }
 .ft-top b { font: 400 1.2cqw "Press Start 2P", monospace; color: #F5B700; }
 .ft-top em { font: 400 1.2cqw "Press Start 2P", monospace; font-style: normal; }
 .ft-left { position: absolute; left: .8cqw; top: 1.5cqh; bottom: 34cqh; width: 20cqw; overflow: hidden; display: flex; flex-direction: column; gap: .5cqh; }
-.ft-tr { display: flex; align-items: center; gap: .6cqw; padding: .3cqh .5cqw; background: rgba(20,14,10,.8); border-left: .5cqw solid #5a4a3c; font-size: 1.75cqw; color: #a39a88; }
+.ft-tr { display: flex; align-items: center; gap: .6cqw; padding: .3cqh .5cqw; background: rgba(20,14,10,.93); border-left: .5cqw solid #5a4a3c; font-size: 1.75cqw; color: #a39a88; }
 .ft-tr i { flex: none; width: 2.3cqw; height: 2.3cqw; display: flex; align-items: center; justify-content: center; background: #2a221c; font-style: normal; font-weight: 700; }
 .ft-tr span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ft-tr small { font-size: 1.5cqw; }
 .ft-tr.on { border-color: var(--c); color: #fff; }
 .ft-tr.on i { background: var(--c); color: #14110e; }
 .ft-right { position: absolute; right: .8cqw; top: 1.5cqh; width: 16cqw; display: flex; flex-direction: column; gap: .4cqh; }
-.ft-pl { position: relative; display: flex; justify-content: space-between; padding: .1cqh .6cqw .7cqh; background: rgba(20,14,10,.8); font-size: 1.7cqw; overflow: hidden; }
+.ft-pl { position: relative; display: flex; justify-content: space-between; padding: .1cqh .6cqw .7cqh; background: rgba(20,14,10,.93); font-size: 1.7cqw; overflow: hidden; }
 .ft-pl span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 11cqw; }
 .ft-pl.me { outline: 2px solid #F5B700; }
 .ft-pl.out { opacity: .35; }
@@ -922,7 +927,7 @@ body.pseudo-fs .crt { position: fixed; inset: 0; z-index: 500; height: auto; min
 .ft-itb.on { border-color: #F5B700; }
 .ft-it { display: block; width: 2.4cqw; height: 2.4cqw; background: var(--c); box-shadow: inset -3px -3px 0 rgba(0,0,0,.35), inset 3px 3px 0 rgba(255,255,255,.3); }
 .ft-bot { position: absolute; left: .8cqw; right: .8cqw; bottom: 1cqh; height: 26cqh; display: flex; gap: .8cqw; align-items: stretch; }
-.ft-eco { flex: none; width: 15cqw; display: flex; flex-direction: column; gap: .5cqh; padding: .6cqh .6cqw; background: rgba(20,14,10,.9); border: 2px solid #5a4a3c; }
+.ft-eco { flex: none; width: 15cqw; display: flex; flex-direction: column; gap: .5cqh; padding: .6cqh .6cqw; background: rgba(20,14,10,.96); border: 2px solid #5a4a3c; }
 .ft-eco b { font: 400 1.6cqw "Press Start 2P", monospace; color: #F5B700; }
 .ft-eco small { font-size: 1.4cqw; line-height: 1.1; }
 .ft-eco button, .ft-ready { border: 0; border-bottom: 3px solid rgba(0,0,0,.45); background: #d9a02a; color: #14110e; font: 600 1.6cqw Fredoka, sans-serif; cursor: pointer; padding: .3cqh; }

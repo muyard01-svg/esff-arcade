@@ -169,6 +169,10 @@ class Tactique:
         self.finished: list[int] | None = None
         self.order: list[int] = []
         self.dirty = True
+        for p in self.p:           # chacun commence avec une unité commune tirée au hasard, déjà sur l'atelier
+            u = random.choice([i for i in BY_TIER[0] if self.pool[i] > 0])
+            self.pool[u] -= 1
+            p.board[(3, 0)] = [u, 1, []]
         self.start_round()
 
     # ---------------- boutique ----------------
