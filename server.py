@@ -82,6 +82,12 @@ def init_db():
             create table if not exists card_owned(player text, card integer, n integer, primary key(player, card));
             create table if not exists card_pity(player text primary key, n integer);
         ''')
+        # première collection (numéros 1 à 102) : chaque carte devient celle de la même entreprise, les autres sont retirées
+        old_ids = {c['old']: c['id'] for c in CARDS if c.get('old')}
+        for r in con.execute('select player, card, n from card_owned where card<1000').fetchall():
+            if r['card'] in old_ids:
+                con.execute('insert into card_owned(player, card, n) values(?,?,?) on conflict(player, card) do update set n=n+excluded.n', (r['player'], old_ids[r['card']], r['n']))
+        con.execute('delete from card_owned where card<1000')
         cols = [r[1] for r in con.execute('pragma table_info(players)')]
         if 'name' not in cols:
             con.execute('alter table players add column name text')

@@ -11,7 +11,7 @@ const MENU = [
   ...[...GAMES].sort((a, b) => SOLO_ORDER.indexOf(a.id) - SOLO_ORDER.indexOf(b.id))
     .map(gm => ({ id: gm.id, kind: 'solo', title: gm.title, tone: toneOf(gm), tag: SOLO_TAGS[gm.id] || `TEINTE ${TONES[gm.teinte].name.toUpperCase()}`, pitch: gm.pitch })),
   { sep: 'COLLECTION' },
-  { id: 'boosters', kind: 'extra', title: 'Boosters ESFF', tone: '#C77DFF', tag: '102 CARTES', pitch: 'Ouvre des boosters et complète la collection ESFF : 102 cartes d\'entreprises de la fonderie et de la forge, de la commune à la secrète.' },
+  { id: 'boosters', kind: 'extra', title: 'Boosters ESFF', tone: '#C77DFF', tag: '558 CARTES', pitch: 'Ouvre des boosters et complète la collection ESFF : toutes les fonderies et forges de France en cartes, de la commune à la secrète.' },
   { id: 'secrets', kind: 'extra', title: 'Les Secrets de l\'École', tone: '#7FD48A', tag: '50 SECRETS', pitch: 'Gratte des tickets et perce les 50 secrets de Captain Obvious : des révélations que personne n\'aurait pu deviner.' },
   { sep: 'BORNE' },
   { id: 'tickets', kind: 'panel', title: 'Mes tickets', tone: '#F5B700', tag: '-10 %', pitch: 'Gratte le sable du moule : 1 ticket sur 5 cache un code de -10 % pour la boutique de la promo.' },

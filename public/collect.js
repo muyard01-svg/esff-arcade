@@ -1,6 +1,6 @@
 /* Collection : les Secrets de l'École (tickets à gratter) et les Boosters ESFF (102 cartes d'entreprises).
    Les tirages sont faits par le serveur. Les illustrations sont dessinées ici, sans logo d'entreprise.
-   Les arts « alternative » et « légendaire » sont dans HERO : c'est là qu'il faudra les retravailler. */
+   Style cartoon : toonMan, toonFactory et paintCardArt dessinent des personnages originaux, différents pour chaque entreprise. */
 'use strict';
 
 const RARITY = {
@@ -18,6 +18,7 @@ const METAL_PAL = {
   Fonte: ['#1c1210', '#6a2a12', '#ff7a2a', '#ffd27a'], Acier: ['#0f1620', '#27425e', '#7fb4e8', '#e6f2ff'], Aluminium: ['#141a20', '#46586a', '#c9d6e2', '#ffffff'],
   Cuivreux: ['#1a120a', '#6a4016', '#d9963a', '#ffe0a0'], Zinc: ['#14181a', '#3c5258', '#9cc4c8', '#eefcff'], Titane: ['#16121e', '#463a66', '#b49ae6', '#f0e8ff'], Magnésium: ['#10181a', '#2c5a50', '#8ae0c0', '#eafff6'], Autres: ['#181418', '#4a3a4a', '#c8a8c8', '#fff0ff'],
 };
+let CARD_TOTAL = 558;
 const seeded = n => { let s = (n * 2654435761) >>> 0; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
 
 /* ---------- sujets dessinés (centre 0,0 ; environ 200 unités de haut) ---------- */
@@ -94,48 +95,122 @@ const SUBJECT = {
     g.fillStyle = '#d8dde3'; g.beginPath(); g.arc(0, 0, 20, 0, 7); g.fill();
   },
 };
-// décor des cartes de prestige : à retravailler carte par carte
-const HERO = {
-  alternative(g, W, H, p, r) {
-    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, p[1]); bg.addColorStop(0.55, p[0]); bg.addColorStop(1, '#06050a'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 7; i++) { g.strokeStyle = `rgba(255,255,255,${0.03 + r() * 0.07})`; g.lineWidth = 2 + r() * 12; g.beginPath(); const y = r() * H; g.moveTo(-10, y); g.bezierCurveTo(W * 0.3, y - 120 * r(), W * 0.7, y + 160 * r(), W + 10, y - 80); g.stroke(); }
-    g.globalCompositeOperation = 'source-over';
-  },
-  legendaire(g, W, H, p, r) {
-    const bg = g.createRadialGradient(W / 2, H * 0.42, 10, W / 2, H * 0.42, H * 0.8); bg.addColorStop(0, '#fff3c4'); bg.addColorStop(0.25, p[2]); bg.addColorStop(0.6, p[1]); bg.addColorStop(1, '#0a0604'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.save(); g.translate(W / 2, H * 0.42); g.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 28; i++) { g.rotate(6.283 / 28); g.fillStyle = `rgba(255,220,140,${0.04 + r() * 0.08})`; g.beginPath(); g.moveTo(0, 0); g.lineTo(H, -14 - r() * 30); g.lineTo(H, 14 + r() * 30); g.fill(); }
-    g.restore();
-  },
-  secrete(g, W, H, p, r) {
-    const bg = g.createLinearGradient(0, 0, W, H); ['#2a0a4a', '#a0145a', '#ff7a2a', '#ffd27a', '#27a0c8', '#14205a'].forEach((c, i) => bg.addColorStop(i / 5, c)); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.globalCompositeOperation = 'lighter'; for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,255,${r() * 0.2})`; g.beginPath(); g.arc(r() * W, r() * H, 2 + r() * 30, 0, 7); g.fill(); } g.globalCompositeOperation = 'source-over';
-  },
+/* ---------- style cartoon : gros contours, couleurs franches, un personnage original par entreprise ---------- */
+const INK = '#2a1c14';
+const SKINS = ['#f6cfa8', '#eab98c', '#d59a6a', '#a8704a', '#7a4e32'], HAIRS = ['#2a1c14', '#5a3a20', '#8a5a2c', '#c9a15a', '#6a6f77', '#3a2a4a'];
+const SUITS = { fonderie: ['#3a4a5e', '#6a4a30', '#2f6f6a', '#4a3a5e'], forge: ['#2f4a7a', '#5a2f2f', '#3a3d42'], art: ['#6a3a5e', '#8a5a2c', '#2f6f4a'], cloche: ['#7a5a1e', '#4a3a5e'], ecole: ['#23232e'] };
+const QUIPS = {
+  fonderie: ['Ici, le métal ne dort jamais.', 'Ça coule de source.', 'Chaud devant, ça coule !', 'Le sable, c’est la vie.', 'Moule d’abord, discute après.', 'Toujours à la bonne température.'],
+  forge: ['Frappe d’abord, discute après.', 'Quand ça tape, ça forme.', 'Le fer se bat tant qu’il est chaud.', 'Ici, on a le bras long.', 'Une main de fer, évidemment.'],
+  art: ['Le bronze a du style.', 'La cire est perdue, pas le talent.', 'Ici, chaque pièce est une œuvre.'], cloche: ['On l’entend de loin.', 'Ça sonne juste.'],
+  ecole: ['Forme les fondeurs et les forgerons de demain. Le cœur de toute la filière.'],
 };
+const FRAME = { commun: '#a39a88', rare: '#3f7fd8', super: '#4a3fb0', alternative: '#1f9a7a', legendaire: '#f5b700', secrete: '#ff5ad0' };
+const BADGE = { commun: 'C', rare: 'R', super: 'SR', alternative: 'ALT', legendaire: 'LEG', secrete: 'SEC' };
+const stroke = (g, w = 4) => { g.lineWidth = w; g.strokeStyle = INK; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); };
+const shape = (g, fill, w) => { g.fillStyle = fill; g.fill(); stroke(g, w); };
+function rrect(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+
+function toonCloud(g, x, y, s) { g.beginPath(); g.arc(x, y, 18 * s, 0, 7); g.arc(x + 22 * s, y - 8 * s, 22 * s, 0, 7); g.arc(x + 46 * s, y, 16 * s, 0, 7); g.fillStyle = '#fff'; g.fill(); }
+function toonFactory(g, x, y, w, h, r, name) {
+  const wall = ['#d8d2c4', '#c9b8a0', '#b8c4cc', '#d9c08e'][Math.floor(r() * 4)];
+  [[0.14, 56], [0.3, 76]].forEach(([k, ch]) => { rrect(g, x + w * k, y - ch, 20, ch + 6, 3); shape(g, '#8a5a44', 3); g.fillStyle = '#fff'; g.fillRect(x + w * k + 1, y - ch + 10, 18, 5); });
+  rrect(g, x, y, w, h, 6); shape(g, wall);
+  g.beginPath(); g.moveTo(x - 6, y); for (let i = 0; i < 5; i++) { const a = x + i * w / 5; g.lineTo(a + w / 10, y - 16); g.lineTo(a + w / 5, y); } shape(g, '#6a6f77', 3);
+  for (let i = 0; i < 4; i++) { rrect(g, x + 12 + i * (w - 24) / 4, y + h * 0.56, (w - 24) / 4 - 8, h * 0.28, 3); shape(g, '#7fc4e8', 3); }
+  const label = name.length > 18 ? name.slice(0, 17) + '…' : name;
+  g.font = `900 ${label.length > 13 ? 15 : 19}px Fredoka, Archivo, sans-serif`;
+  const tw = Math.min(w - 12, g.measureText(label).width + 18);
+  rrect(g, x + w / 2 - tw / 2, y + 8, tw, 28, 5); shape(g, '#fbf3e0', 3);
+  g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, x + w / 2, y + 23, w - 20);
+}
+function toonWorkshop(g, W, H, c, r, p) {
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#3a2a24'); bg.addColorStop(1, '#7a4a2a'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; for (let y = 24; y < H; y += 26) for (let x = (y % 52 ? 0 : 26) - 26; x < W; x += 52) g.strokeRect(x, y, 52, 26);
+  const gl = g.createRadialGradient(W * 0.72, H * 0.62, 10, W * 0.72, H * 0.62, 190); gl.addColorStop(0, '#fff1a8'); gl.addColorStop(0.3, p[2]); gl.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H);
+  rrect(g, W * 0.56, 40, W * 0.38, H - 40, 8); g.save(); g.clip(); g.fillStyle = 'rgba(60,30,14,.45)'; g.fillRect(0, 0, W, H); g.restore();
+  g.save(); g.translate(W * 0.74, H * 0.5); g.scale(0.72, 0.72); (SUBJECT[c.kind] || SUBJECT.fonderie)(g, p); g.restore();
+  g.font = '900 15px Fredoka, Archivo, sans-serif'; const label = c.name.length > 22 ? c.name.slice(0, 21) + '…' : c.name, tw = Math.min(W * 0.62, g.measureText(label).width + 18);
+  rrect(g, W - tw - 12, 10, tw, 26, 5); shape(g, '#fbf3e0', 3); g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, W - 12 - tw / 2, 23, tw - 10);
+}
+// personnage : tête ronde, petits yeux, gros contour. pose 'up' = bras levés
+function toonMan(g, x, y, s, r, o = {}) {
+  const skin = SKINS[Math.floor(r() * SKINS.length)], hair = HAIRS[Math.floor(r() * HAIRS.length)], suits = SUITS[o.kind] || SUITS.fonderie, suit = o.suit || suits[Math.floor(r() * suits.length)];
+  const style = Math.floor(r() * 5), glasses = r() < 0.3, beard = r() < 0.3, hat = o.hat !== undefined ? o.hat : Math.floor(r() * 4), up = o.pose === 'up';
+  g.save(); g.translate(x, y); g.scale(s, s);
+  // corps et bras
+  if (up) [-1, 1].forEach(k => { g.beginPath(); g.moveTo(k * 44, 66); g.quadraticCurveTo(k * 84, 40, k * 92, -14); g.lineTo(k * 72, -18); g.quadraticCurveTo(k * 62, 30, k * 34, 44); g.closePath(); shape(g, suit); g.beginPath(); g.arc(k * 84, -22, 13, 0, 7); shape(g, skin); });
+  g.beginPath(); g.moveTo(-68, 120); g.quadraticCurveTo(-66, 44, -24, 36); g.lineTo(24, 36); g.quadraticCurveTo(66, 44, 68, 120); g.closePath(); shape(g, suit);
+  g.beginPath(); g.moveTo(-16, 38); g.lineTo(0, 62); g.lineTo(16, 38); shape(g, skin, 3);
+  if (o.mark) { g.font = '900 17px Fredoka, Archivo, sans-serif'; g.fillStyle = '#ffe9a0'; g.textAlign = 'center'; g.fillText(o.mark, 0, 92); }
+  // tête
+  g.beginPath(); g.arc(-44, -2, 9, 0, 7); g.arc(44, -2, 9, 0, 7); shape(g, skin, 3);
+  g.beginPath(); g.ellipse(0, -6, 44, 46, 0, 0, 7); shape(g, skin);
+  if (beard) { g.beginPath(); g.moveTo(-42, 2); g.quadraticCurveTo(-40, 48, 0, 48); g.quadraticCurveTo(40, 48, 42, 2); g.quadraticCurveTo(22, 16, 0, 14); g.quadraticCurveTo(-22, 16, -42, 2); shape(g, hair, 3); }
+  // coiffure ou casque
+  if (hat === 0) { g.beginPath(); g.arc(0, -22, 45, Math.PI, 0); g.closePath(); shape(g, '#f5b700'); rrect(g, -56, -26, 112, 11, 5); shape(g, '#f5b700', 3); }
+  else if (hat === 1) { g.beginPath(); g.arc(0, -20, 44, Math.PI, 0); g.closePath(); shape(g, o.suit || '#3f7fd8'); rrect(g, 0, -26, 62, 10, 5); shape(g, o.suit || '#3f7fd8', 3); }
+  else if (hat === 2) { g.beginPath(); g.moveTo(-58, -30); g.lineTo(0, -52); g.lineTo(58, -30); g.lineTo(0, -10); g.closePath(); shape(g, '#23232e'); g.beginPath(); g.moveTo(40, -28); g.lineTo(46, 4); stroke(g, 3); g.beginPath(); g.arc(46, 8, 5, 0, 7); shape(g, '#f5b700', 2); }
+  else if (style === 4) { /* crâne chauve */ }
+  else {
+    g.beginPath(); g.moveTo(-46, -6);
+    const spikes = 5 + style; for (let i = 0; i <= spikes; i++) { const a = Math.PI + i / spikes * Math.PI, rr = i % 2 ? 56 : 46; g.lineTo(Math.cos(a) * rr, -12 + Math.sin(a) * rr); }
+    g.lineTo(46, -6); g.quadraticCurveTo(10, -30, -46, -6); shape(g, hair);
+  }
+  // visage
+  [-16, 16].forEach(k => { g.beginPath(); g.arc(k, -6, 5, 0, 7); g.fillStyle = INK; g.fill(); g.beginPath(); g.arc(k + 1.6, -8, 1.6, 0, 7); g.fillStyle = '#fff'; g.fill(); });
+  g.beginPath(); g.moveTo(-24, -18); g.lineTo(-8, -20); g.moveTo(8, -20); g.lineTo(24, -18); stroke(g, 3);
+  g.beginPath(); g.moveTo(-2, 2); g.quadraticCurveTo(4, 8, -2, 11); stroke(g, 2.5);
+  g.beginPath(); g.moveTo(-12, 20); g.quadraticCurveTo(0, 30, 14, 18); stroke(g, 3);
+  if (glasses) { [-16, 16].forEach(k => { g.beginPath(); g.arc(k, -6, 13, 0, 7); stroke(g, 3); }); g.beginPath(); g.moveTo(-3, -6); g.lineTo(3, -6); stroke(g, 3); }
+  g.restore();
+}
+function toonFire(g, W, H, r, n, cols) { for (let i = 0; i < n; i++) { const x0 = r() * W, y0 = H * (0.3 + r() * 0.7), a = r() * 6.28; g.strokeStyle = cols[i % cols.length]; g.lineWidth = 3 + r() * 7; g.lineCap = 'round'; g.globalAlpha = 0.7; g.beginPath(); g.moveTo(x0, y0); g.bezierCurveTo(x0 + Math.cos(a) * 80, y0 - 60, x0 - Math.cos(a) * 70, y0 - 130, x0 + Math.sin(a) * 60, y0 - 190); g.stroke(); } g.globalAlpha = 1; }
 
 function paintCardArt(cv, c) {
-  const full = ['alternative', 'legendaire', 'secrete'].includes(c.r);
-  const W = cv.width = 360, H = cv.height = full ? 504 : 250, g = cv.getContext('2d');
-  const p = METAL_PAL[c.metal] || METAL_PAL.Fonte, r = seeded(c.id + 7);
-  if (full) HERO[c.r](g, W, H, p, r);
-  else {
-    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, p[0]); bg.addColorStop(0.75, p[1]); bg.addColorStop(1, p[2]); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.fillStyle = 'rgba(0,0,0,.45)'; for (let x = 0; x < W;) { const w = 30 + r() * 60, h = 40 + r() * 90; g.fillRect(x, H - h, w, h); if (r() < 0.4) g.fillRect(x + w * 0.4, H - h - 50, 12, 50); x += w + r() * 12; }
+  const full = c.r === 'secrete', W = cv.width = 360, H = cv.height = full ? 504 : 228, g = cv.getContext('2d');
+  const p = METAL_PAL[c.metal] || METAL_PAL.Fonte, r = seeded(c.id);
+  if (full) {
+    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2a1a4a'); bg.addColorStop(0.5, '#a0241e'); bg.addColorStop(1, '#ff8a2a'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    toonFactory(g, 190, 150, 160, 120, seeded(5), 'ESFF');
+    toonFire(g, W, H, r, 26, ['#ffd27a', '#ff8a2a', '#fff1a8', '#ff5ad0']);
+    toonMan(g, W / 2, 196, 1.15, seeded(21), { kind: 'ecole', suit: '#23232e', hat: 2, pose: 'up', mark: 'ESFF' });
+    toonFire(g, W, H, r, 8, ['#fff1a8', '#ffd27a']);
+    return;
   }
-  g.save(); g.translate(W / 2, full ? H * 0.42 : H * 0.52); const s = full ? 1.32 : 0.92; g.scale(s, s);
-  g.shadowColor = full ? 'rgba(255,200,120,.75)' : 'rgba(0,0,0,.6)'; g.shadowBlur = full ? 34 : 12;
-  (SUBJECT[c.scene] || SUBJECT[c.kind] || SUBJECT.fonderie)(g, p); g.restore();
-  for (let i = 0; i < (full ? 70 : 22); i++) { g.fillStyle = r() < 0.5 ? p[3] : p[2]; g.globalAlpha = 0.3 + r() * 0.7; const z = 1 + r() * 2.4; g.fillRect(r() * W, r() * H, z, z); } g.globalAlpha = 1;
+  const leg = c.r === 'legendaire', alt = c.r === 'alternative', sup = c.r === 'super';
+  if (leg) {
+    const bg = g.createRadialGradient(W / 2, H * 0.5, 10, W / 2, H * 0.5, 280); bg.addColorStop(0, '#fff1a8'); bg.addColorStop(0.4, '#ff9a2a'); bg.addColorStop(1, '#8a1e0c'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.save(); g.translate(W / 2, H * 0.52); for (let i = 0; i < 24; i++) { g.rotate(0.2618); g.fillStyle = i % 2 ? 'rgba(255,240,170,.35)' : 'rgba(255,120,30,.2)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(420, -40); g.lineTo(420, 40); g.fill(); } g.restore();
+    toonFactory(g, 196, 74, 150, 110, r, c.name); toonFire(g, W, H, r, 12, ['#fff1a8', '#ff5a1a', '#ffd27a']);
+    toonMan(g, 112, 112, 0.92, r, { kind: c.kind, hat: 0, pose: 'up' });
+  } else if (alt) {
+    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#2a1f6a'); bg.addColorStop(0.55, '#c8386a'); bg.addColorStop(1, '#ffb347'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,255,${r()})`; g.fillRect(r() * W, r() * H * 0.6, 2, 2); }
+    g.save(); g.translate(W * 0.68, H * 0.52); g.scale(0.82, 0.82); g.shadowColor = '#fff1a8'; g.shadowBlur = 26; (SUBJECT[c.scene] || SUBJECT[c.kind])(g, p); g.restore();
+    toonMan(g, 96, 118, 0.88, r, { kind: c.kind });
+  } else if (r() < (c.kind === 'forge' ? 0.7 : 0.5)) {
+    toonWorkshop(g, W, H, c, r, p);
+    toonMan(g, 98, 122, sup ? 0.92 : 0.86, r, { kind: c.kind, pose: sup ? 'up' : '' });
+  } else {
+    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#6db4ea'); bg.addColorStop(1, '#d8efff'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    toonCloud(g, 40 + r() * 60, 40, 0.8); toonCloud(g, 190 + r() * 90, 28, 1);
+    g.fillStyle = '#7fb45a'; g.fillRect(0, H * 0.78, W, H * 0.22); g.fillStyle = '#b8b2a8'; g.fillRect(0, H * 0.88, W, H * 0.12);
+    toonFactory(g, 150, 78, 196, 104, r, c.name);
+    toonMan(g, 92, 122, sup ? 0.92 : 0.86, r, { kind: c.kind, pose: sup ? 'up' : '' });
+  }
+  for (let i = 0; i < (leg || alt ? 40 : 10); i++) { g.fillStyle = p[3]; const z = 1 + r() * 3; g.fillRect(r() * W, r() * H, z, z); }
 }
 
 /* ---------- une carte ---------- */
 function cardHTML(c) {
-  const R = RARITY[c.r], atk = (CARD_ATK[c.kind] || CARD_ATK.fonderie), name = atk[c.id % atk.length];
-  return `<div class="cc r-${c.r}" data-card="${c.id}"><div class="cc-in"><canvas class="cc-art"></canvas>
-    <div class="cc-top"><b>${esc(c.name)}</b><span>${c.pv} PV</span></div>
-    <div class="cc-info"><small>${KIND_LABEL[c.kind]} · ${esc(c.metal)} · ${esc(c.city)}</small><p><b>${name}</b><i>${c.atk}</i></p></div>
-    <div class="cc-foot"><span style="color:${R.color}">${R.mark} ${R.name}</span><span>${c.id}/102</span></div><div class="cc-foil"></div><div class="cc-glare"></div></div></div>`;
+  const qs = QUIPS[c.kind] || QUIPS.fonderie, quip = qs[c.id % qs.length], L = ['Savoir-faire', 'Innovation', 'Rayonnement'];
+  return `<div class="cc r-${c.r}" data-card="${c.id}" style="--fr:${FRAME[c.r]}"><div class="cc-in"><canvas class="cc-art"></canvas><div class="cc-foil"></div>
+    <div class="cc-top"><b>${esc(c.name)}</b></div><span class="cc-badge">${BADGE[c.r]}</span>
+    <div class="cc-info"><p>${esc(quip)}</p><small>${KIND_LABEL[c.kind]} · ${esc(c.city)}</small></div>
+    <div class="cc-stats">${c.st.map((v, i) => `<div><span>${L[i]}</span><b>${v}</b></div>`).join('')}</div>
+    <div class="cc-tags">${c.tags.map(t => `<i>${esc(t)}</i>`).join('')}</div>
+    <div class="cc-num">${c.id - 1000}/${CARD_TOTAL}</div><div class="cc-glare"></div></div></div>`;
 }
 function mountCard(host, c) {
   host.innerHTML = cardHTML(c);
@@ -253,11 +328,11 @@ function runSecrets(stage) {
 
 /* ---------- jeu 2 : boosters ---------- */
 function runBoosters(stage) {
-  let set = [], owned = {}, left = 0, byId = {};
+  let set = [], owned = {}, left = 0, byId = {}, query = '';
   const countOwned = () => Object.keys(owned).length;
   const home = () => {
     stage.innerHTML = `<div class="cl-wrap"><div class="pk" id="pk"><i class="pk-tear"></i><b>ESFF</b><span>Collection 102</span><small>5 cartes</small></div>
-      <p class="cl-hint"><b>${countOwned()}/102</b> cartes · ${left} booster${left > 1 ? 's' : ''} à ouvrir aujourd’hui (chaque ticket gagné dans un jeu en ajoute un).</p>
+      <p class="cl-hint"><b>${countOwned()}/${CARD_TOTAL}</b> cartes · ${left} booster${left > 1 ? 's' : ''} à ouvrir aujourd’hui (chaque ticket gagné dans un jeu en ajoute un).</p>
       <div class="end-actions"><button class="btn btn-hot" id="pkGo" ${left ? '' : 'disabled'}>Ouvrir un booster</button><button class="btn btn-ghost" id="pkBook">Mon classeur</button></div></div>`;
     $('#pkGo', stage).addEventListener('click', open);
     $('#pkBook', stage).addEventListener('click', () => binder());
@@ -297,34 +372,45 @@ function runBoosters(stage) {
     show();
   };
   const summary = pack => {
-    stage.innerHTML = `<div class="cl-wrap"><h4 class="cl-h">Ton booster · ${countOwned()}/102</h4><div class="cl-grid" id="sm"></div><div class="end-actions"><button class="btn btn-hot" id="smAg" ${left ? '' : 'disabled'}>Encore un (${left})</button><button class="btn btn-ghost" id="smBk">Mon classeur</button></div></div>`;
+    stage.innerHTML = `<div class="cl-wrap"><h4 class="cl-h">Ton booster · ${countOwned()}/${CARD_TOTAL}</h4><div class="cl-grid" id="sm"></div><div class="end-actions"><button class="btn btn-hot" id="smAg" ${left ? '' : 'disabled'}>Encore un (${left})</button><button class="btn btn-ghost" id="smBk">Mon classeur</button></div></div>`;
     pack.forEach(({ c, isNew }) => { const d = document.createElement('div'); d.className = 'cl-slot'; $('#sm', stage).appendChild(d); mountCard(d, c); if (isNew) d.insertAdjacentHTML('beforeend', '<em>NEW</em>'); d.addEventListener('click', () => zoom(c)); });
     $('#smAg', stage).addEventListener('click', home);
     $('#smBk', stage).addEventListener('click', () => binder());
   };
   const zoom = c => {
     const box = document.createElement('div'); box.className = 'cl-zoom'; box.dataset.overlay = '1';
-    box.innerHTML = `<div class="cl-z"></div><div class="end-actions">${c.r === 'secrete' ? '<button class="btn btn-hot" id="zImm">Entrer dans la carte</button>' : ''}<button class="btn btn-ghost" id="zOut">Fermer</button></div><small>Exemplaires : ${owned[c.id] || 0}. PV et attaque sont fictifs.</small>`;
+    box.innerHTML = `<div class="cl-z"></div><div class="end-actions">${c.r === 'secrete' ? '<button class="btn btn-hot" id="zImm">Entrer dans la carte</button>' : ''}<button class="btn btn-ghost" id="zOut">Fermer</button></div><small>Exemplaires : ${owned[c.id] || 0}. Les stats sont fictives, pour le jeu.</small>`;
     $('.modal-box').appendChild(box); mountCard($('.cl-z', box), c);
     $('#zOut', box).addEventListener('click', () => box.remove());
     const b = $('#zImm', box); if (b) b.addEventListener('click', () => { box.remove(); immersive(c, () => zoom(c)); });
   };
-  const binder = (filter = 'all') => {
-    const list = set.filter(c => filter === 'all' || c.r === filter);
-    stage.innerHTML = `<div class="cl-wrap wide"><div class="cl-bar"><button class="btn btn-sm btn-ghost" id="bkBack">◀ Boosters</button><b>${countOwned()}/102</b>
-      <div class="cl-chips"><button data-f="all" class="${filter === 'all' ? 'on' : ''}">Toutes</button>${RAR_ORDER.map(r => `<button data-f="${r}" class="${filter === r ? 'on' : ''}" style="--c:${RARITY[r].color}">${RARITY[r].mark} ${set.filter(c => c.r === r && owned[c.id]).length}/${set.filter(c => c.r === r).length}</button>`).join('')}</div></div><div class="cl-grid book" id="bk"></div></div>`;
+  const PAGE = 48;
+  const binder = (filter = 'all', page = 0) => {
+    const q = query.toLowerCase();
+    const list = set.filter(c => (filter === 'all' || c.r === filter) && (!q || c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q)));
+    const pages = Math.max(1, Math.ceil(list.length / PAGE)); page = Math.min(page, pages - 1);
+    stage.innerHTML = `<div class="cl-wrap wide"><div class="cl-bar"><button class="btn btn-sm btn-ghost" id="bkBack">◀ Boosters</button><b>${countOwned()}/${CARD_TOTAL}</b>
+      <input id="bkQ" placeholder="Chercher une entreprise ou une ville" value="${esc(query)}">
+      <div class="cl-chips"><button data-f="all" class="${filter === 'all' ? 'on' : ''}">Toutes</button>${RAR_ORDER.map(r => `<button data-f="${r}" class="${filter === r ? 'on' : ''}" style="--c:${RARITY[r].color}">${BADGE[r]} ${set.filter(c => c.r === r && owned[c.id]).length}/${set.filter(c => c.r === r).length}</button>`).join('')}</div></div>
+      <div class="cl-grid book" id="bk"></div>
+      <div class="cl-pages"><button class="btn btn-sm btn-ghost" id="bkP" ${page ? '' : 'disabled'}>◀</button><span>Page ${page + 1}/${pages}</span><button class="btn btn-sm btn-ghost" id="bkN" ${page + 1 < pages ? '' : 'disabled'}>▶</button></div></div>`;
     $('#bkBack', stage).addEventListener('click', home);
-    stage.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => binder(b.dataset.f)));
+    $('#bkP', stage).addEventListener('click', () => binder(filter, page - 1));
+    $('#bkN', stage).addEventListener('click', () => binder(filter, page + 1));
+    const qi = $('#bkQ', stage);
+    qi.addEventListener('change', () => { query = qi.value.trim(); binder(filter, 0); });
+    qi.addEventListener('keydown', e => e.stopPropagation());
+    stage.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => binder(b.dataset.f, 0)));
     const bk = $('#bk', stage);
-    list.forEach(c => {
+    list.slice(page * PAGE, (page + 1) * PAGE).forEach(c => {
       const d = document.createElement('div'); d.className = 'cl-slot';
       if (owned[c.id]) { mountCard(d, c); if (owned[c.id] > 1) d.insertAdjacentHTML('beforeend', `<u>×${owned[c.id]}</u>`); d.addEventListener('click', () => zoom(c)); }
-      else d.innerHTML = `<div class="cc-none"><b>${c.id}</b><span style="color:${RARITY[c.r].color}">${RARITY[c.r].mark}</span></div>`;
+      else d.innerHTML = `<div class="cc-none"><b>${c.id - 1000}</b><span style="color:${RARITY[c.r].color}">${BADGE[c.r]}</span><small>${esc(c.name)}</small></div>`;
       bk.appendChild(d);
     });
   };
   stage.innerHTML = '<div class="screen"><p>Préparation des boosters…</p></div>';
-  apiCall('/api/cards', {}, true).then(r => { set = r.set; owned = r.owned; left = r.left; set.forEach(c => { byId[c.id] = c; }); home(); }).catch(e => toast(e.message));
+  apiCall('/api/cards', {}, true).then(r => { set = r.set; owned = r.owned; left = r.left; CARD_TOTAL = set.length; set.forEach(c => { byId[c.id] = c; }); home(); }).catch(e => toast(e.message));
 }
 
 function openCollect(id) {
