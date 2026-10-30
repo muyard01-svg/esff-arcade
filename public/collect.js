@@ -204,6 +204,8 @@ function paintCardArt(cv, c) {
 
 /* ---------- une carte ---------- */
 function cardHTML(c) {
+  // carte illustrée à la main : l'image est la carte entière
+  if (c.img) return `<div class="cc has-img r-${c.r}" data-card="${c.id}"><div class="cc-in"><img src="${c.img}" alt="${esc(c.name)}" draggable="false"><div class="cc-foil"></div><div class="cc-glare"></div></div></div>`;
   const qs = QUIPS[c.kind] || QUIPS.fonderie, quip = qs[c.id % qs.length], L = ['Savoir-faire', 'Innovation', 'Rayonnement'];
   return `<div class="cc r-${c.r}" data-card="${c.id}" style="--fr:${FRAME[c.r]}"><div class="cc-in"><canvas class="cc-art"></canvas><div class="cc-foil"></div>
     <div class="cc-top"><b>${esc(c.name)}</b></div><span class="cc-badge">${BADGE[c.r]}</span>
@@ -214,7 +216,7 @@ function cardHTML(c) {
 }
 function mountCard(host, c) {
   host.innerHTML = cardHTML(c);
-  paintCardArt($('canvas', host), c);
+  if (!c.img) paintCardArt($('canvas', host), c);
   const el = $('.cc', host);
   const mv = e => { const b = el.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height; el.style.setProperty('--mx', `${x * 100}%`); el.style.setProperty('--my', `${y * 100}%`); el.style.setProperty('--ry', `${(x - 0.5) * 26}deg`); el.style.setProperty('--rx', `${(0.5 - y) * 26}deg`); el.classList.add('tilt'); };
   el.addEventListener('pointermove', mv);
@@ -330,7 +332,8 @@ function immersive(c, done) {
   box.innerHTML = '<canvas width="960" height="540"></canvas><small>Touche l’écran pour passer</small>';
   $('.modal-box').appendChild(box);
   const cv = $('canvas', box), g = cv.getContext('2d'), W = 960, H = 540;
-  const art = document.createElement('canvas'); paintCardArt(art, c);
+  let art = document.createElement('canvas');
+  if (c.img) { art = new Image(); art.src = c.img; } else paintCardArt(art, c);
   const ease = k => k * k * (3 - 2 * k), cl = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
   const T0 = 1.4, MOVE = 0.8, HOLD = 3.1, SEG = MOVE + HOLD, N = IM_STEPS.length, T1 = T0 + N * SEG, END = T1 + 5.2;
   let t = 0, over = false, lastIdx = -1, lastHit = -1;
@@ -368,7 +371,7 @@ function immersive(c, done) {
     }
     // entrée dans la carte et retour à la carte
     const a = Math.max(1 - ease(cl(t, 0.5, 1.4)), ease(cl(t, END - 1.2, END - 0.2)));
-    if (a > 0) { const s = 0.9 + (1 - a) * 3.4, ch = H * s, cw = ch * 5 / 7; g.globalAlpha = Math.min(1, a * 1.5); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.drawImage(art, W / 2 - cw / 2, H / 2 - ch / 2, cw, ch); g.globalAlpha = 1; }
+    if (a > 0) { const s = 0.9 + (1 - a) * 3.4, ch = H * s, cw = ch * 0.74; g.globalAlpha = Math.min(1, a * 1.5); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); if (!c.img || art.complete) g.drawImage(art, W / 2 - cw / 2, H / 2 - ch / 2, cw, ch); g.globalAlpha = 1; }
     if (t > END) { finish(); return false; }
   });
 }
