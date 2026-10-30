@@ -112,7 +112,7 @@ function startTactiqueClient() {
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#3a3028');
   const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 120);
   // caméra libre, comme sur Forgeopoly : glisser dans le vide pour tourner, molette pour zoomer
-  const CAM0 = { yaw: 0, pitch: 1.0, dist: 18.5 };
+  const CAM0 = { yaw: 0, pitch: 1.12, dist: 16.4 };
   let yaw = CAM0.yaw, pitch = CAM0.pitch, dist = CAM0.dist, orbit = null;
   const placeCam = () => { cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, 1.2 + Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(0, 0, 1.2); };
   const resetCam = () => { yaw = CAM0.yaw; pitch = CAM0.pitch; dist = CAM0.dist; };
@@ -125,7 +125,6 @@ function startTactiqueClient() {
   for (let c = 0; c < 7; c++) for (let r = 0; r < 8; r++) box(0.96, 0.2, 0.96, r >= 4 ? ((c + r) % 2 ? tileA : tileB) : ((c + r) % 2 ? foeA : foeB), c - 3, -0.1, r - 3.5);
   for (let k = 0; k < 9; k++) box(0.92, 0.14, 0.92, M('#8a9aa8'), k - 4, -0.08, 5.15);
   const lava = M('#ff7a2a', { emissive: '#c8400c', emissiveIntensity: 1 }); [-5.1, 5.1].forEach(x => box(0.45, 0.2, 13, lava, x, -0.25, 0.9));
-  [[-6.6, -3], [6.6, -3], [-6.6, 3], [6.6, 3]].forEach(([x, z]) => { box(1.3, 2.4 + Math.abs(z) * 0.3, 1.3, M('#6a3a2a'), x, 1, z); box(1.5, 0.3, 1.5, M('#3a3d42'), x, 2.4 + Math.abs(z) * 0.15, z); });
   const glow = new THREE.PointLight('#ff7a2a', 1.1, 22, 1.6); glow.position.set(0, 4, -7); scene.add(glow);
   const hoverTile = box(0.98, 0.04, 0.98, new THREE.MeshBasicMaterial({ color: '#ffd27a', transparent: true, opacity: 0.4 }), 0, 0.03, 0); hoverTile.visible = false;
 
@@ -236,7 +235,7 @@ function startTactiqueClient() {
   ui.addEventListener('pointerout', e => { if (e.target.closest('[data-u],[data-tr]')) showInfo(''); });
   // on attrape une figurine là où elle se voit à l'écran, quel que soit l'angle de la caméra
   const pickUnit = e => {
-    const r = hud.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, reach = 30 * 18.5 / dist;
+    const r = hud.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, reach = 34 * 16.4 / dist;
     let best = null, bd = reach * reach;
     shown.forEach(o => { const [x, z] = worldOf(o.s), [sx, sy] = project(x, 0.9, z), d = (sx - mx) ** 2 + ((sy - my) * 0.7) ** 2; if (d < bd) { bd = d; best = o.s; } });
     return best;
@@ -249,7 +248,7 @@ function startTactiqueClient() {
     if (selItem !== null) { act('equip', { i: selItem, b: s }); selItem = null; sfx(880, 0.08, 'triangle', 0.04); return; }
     drag = { s, u };
   });
-  hud.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(10, Math.min(28, dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
+  hud.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(9, Math.min(26, dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
   hud.addEventListener('dblclick', resetCam);
   hud.addEventListener('pointermove', e => {
     if (!cur) return;
@@ -280,10 +279,15 @@ function startTactiqueClient() {
   const myFight = () => cur.fights.find(f => f.a === mySeat || f.b === mySeat) || cur.fights[0];
   function drawCombat(f, now) {
     if (fightKey !== cur.round + ':' + f.a) { clearFight(); fightKey = cur.round + ':' + f.a; fightFig = f.units.map(u => figure(u[0], u[1])); }
-    const t = (now - combatAt) / 1000, ti = Math.max(0, Math.min(f.frames.length - 1.001, t / D.frame)), fa = Math.floor(ti), k = ti - fa, A = f.frames[fa], B = f.frames[fa + 1] || A, flip = f.b === mySeat, mine = flip ? 1 : 0;
+    const t = (now - combatAt) / 1000, last = f.frames.length - 1, fa = Math.min(last, Math.floor(t / D.frame)), over = t >= f.dur, flip = f.b === mySeat, mine = flip ? 1 : 0;
+    const A = over ? f.frames[last] : f.frames[Math.min(fa, last - 1)] || f.frames[last], B = over ? A : f.frames[Math.min(fa + 1, last)];
+    // la dernière image tombe à la fin exacte du combat, pas forcément au bout d'un intervalle régulier
+    const span = !over && fa + 1 >= last ? Math.max(0.05, f.dur - fa * D.frame) : D.frame, k = over ? 0 : Math.min(1, (t - fa * D.frame) / span);
     const pos = i => { const o = i * 4, x = (A[o] + (B[o] - A[o]) * k) / 10, y = (A[o + 1] + (B[o + 1] - A[o + 1]) * k) / 10; return flip ? [3 - x, y - 3.5] : [x - 3, 3.5 - y]; };
     f.units.forEach((u, i) => {
-      const o = i * 4, fig = fightFig[i], hp = A[o + 2], [x, z] = pos(i); fig.visible = hp > 0; if (!hp) return;
+      const o = i * 4, fig = fightFig[i], [x, z] = pos(i), dying = A[o + 2] > 0 && B[o + 2] === 0, hp = A[o + 2] + (B[o + 2] - A[o + 2]) * k;
+      if (fig.visible && (hp <= 0 || (dying && k > 0.5))) { fig.visible = false; const c = project(x, 0.9, z); shots.push({ type: 'ring', S: c, E: c, c: '#ffd27a', at: now, dur: 320 }); }
+      if (!fig.visible) return;
       const L = lunges[i]; let dx = 0, dz = 0;
       if (L) { const a = (now - L.at) / 180; if (a < 1) { const s = Math.sin(a * Math.PI) * 0.4; dx = L.dx * s; dz = L.dz * s; } else delete lunges[i]; }
       fig.position.set(x + dx, 0.03 + Math.abs(Math.sin(now / 130 + i)) * 0.04, z + dz);
@@ -320,13 +324,13 @@ function startTactiqueClient() {
     });
     floats = floats.filter(p => now - p.at < 700);
     floats.forEach(p => { const a = (now - p.at) / 700; g.globalAlpha = 1 - a; g.font = `400 ${p.big ? 12 : 9}px "Press Start 2P", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = '#000'; g.fillStyle = p.c; g.strokeText(p.t, p.S[0], p.S[1] - 26 - a * 22); g.fillText(p.t, p.S[0], p.S[1] - 26 - a * 22); g.globalAlpha = 1; });
-    if (t > f.dur + 0.2 && (f.a === mySeat || f.b === mySeat)) { const won = f.win === 2 ? null : (f.win === 0) === (f.a === mySeat); bigText(g, won === null ? 'ÉGALITÉ' : won ? (f.b < 0 ? 'BUTIN !' : 'VICTOIRE') : `DÉFAITE  -${f.dmg}`, W / 2, H * 0.34, 36, won === null ? '#fff' : won ? '#7FD48A' : '#ff5a5a'); }
+    if (over && (f.a === mySeat || f.b === mySeat)) { const won = f.win === 2 ? null : (f.win === 0) === (f.a === mySeat); bigText(g, won === null ? 'ÉGALITÉ' : won ? (f.b < 0 ? 'BUTIN !' : 'VICTOIRE') : `DÉFAITE  -${f.dmg}`, W / 2, H * 0.34, 36, won === null ? '#fff' : won ? '#7FD48A' : '#ff5a5a'); }
   }
   let lastW = 0, lastH = 0;
   const stop = loop(() => {
     if (!cur) return;
     const now = performance.now(), cw = hud.clientWidth, ch = hud.clientHeight;
-    if (cw && (cw !== lastW || ch !== lastH)) { lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'; cam.aspect = cw / ch; cam.setViewOffset(cw, ch, 0, ch * 0.13, cw, ch); cam.updateProjectionMatrix(); }
+    if (cw && (cw !== lastW || ch !== lastH)) { lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'; cam.aspect = cw / ch; cam.setViewOffset(cw, ch, 0, ch * 0.18, cw, ch); cam.updateProjectionMatrix(); }
     g.clearRect(0, 0, W, H);
     placeCam();
     // les figurines restent tournées vers la caméra
