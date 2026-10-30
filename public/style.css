@@ -899,7 +899,8 @@ body.ft-play .stage { padding: 0; }
 .ft-eco button, .ft-ready { position: relative; }
 .ft-eco kbd { left: auto; right: .3cqw; top: 50%; bottom: auto; transform: translateY(-50%); }
 .ft { z-index: 2; line-height: 1.2; position: absolute; inset: 0; container-type: size; pointer-events: none; color: #f2eadc; font-family: Fredoka, Archivo, sans-serif; }
-.ft button, .ft-left, .ft-loot { pointer-events: auto; }
+.ft button, .ft-tr, .ft-loot { pointer-events: auto; }
+.ft-cam { position: absolute; top: 7.5cqh; left: 50%; transform: translateX(-50%); padding: .1cqh .8cqw; background: rgba(20,14,10,.7); font-size: 1.25cqw; white-space: nowrap; }
 .ft-top { position: absolute; top: 1cqh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 1.4cqw; padding: .8cqh 1.6cqw; background: rgba(20,14,10,.86); border: 2px solid #5a4a3c; font-size: 1.8cqw; white-space: nowrap; }
 .ft-top b { font: 400 1.2cqw "Press Start 2P", monospace; color: #F5B700; }
 .ft-top em { font: 400 1.2cqw "Press Start 2P", monospace; font-style: normal; }

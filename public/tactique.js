@@ -6,7 +6,7 @@
 ONLINE.push({
   id: 'tactique', title: 'Forge Tactique', tone: '#C77DFF', label: 'Stratégie auto · 2 à 8 joueurs', tag: 'TACTIQUE 2-8',
   pitch: 'Recrute les métiers de la métallurgie, combine leurs familles, équipe-les d’objets pris sur les monstres et regarde ton atelier se battre tout seul. Le dernier debout gagne.',
-  how: '<b>Clic</b> sur une carte ou touches <b>1 à 5</b> pour recruter · <b>R</b> actualiser · <b>X</b> acheter de l\u2019XP · <b>Espace</b> prêt · <b>glisse</b> une unité pour la placer, sur la boutique pour la vendre (ou <b>E</b> au survol) · 3 exemplaires identiques fusionnent · chaque unité a 2 ou 3 familles : réunis-en plusieurs pour les combos · les manches de monstres donnent des objets : clique un objet, puis une unité. La rareté suit la difficulté de recrutement et la spécialisation : ce n’est pas un jugement sur la valeur des métiers.',
+  how: '<b>Clic</b> sur une carte ou touches <b>1 à 5</b> pour recruter · <b>R</b> actualiser · <b>X</b> acheter de l\u2019XP · <b>Espace</b> prêt · <b>glisse dans le vide</b> pour tourner, <b>molette</b> pour zoomer, <b>C</b> pour recentrer · <b>glisse</b> une unité pour la placer, sur la boutique pour la vendre (ou <b>E</b> au survol) · 3 exemplaires identiques fusionnent · chaque unité a 2 ou 3 familles : réunis-en plusieurs pour les combos · les manches de monstres donnent des objets : clique un objet, puis une unité. La rareté suit la difficulté de recrutement et la spécialisation : ce n’est pas un jugement sur la valeur des métiers.',
 });
 HANDLERS.tactique = () => updateTactique();
 
@@ -110,7 +110,12 @@ function startTactiqueClient() {
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.outputEncoding = THREE.sRGBEncoding;
   const canvas = renderer.domElement; canvas.className = 'tk-3d'; canvas.dataset.overlay = '1'; screen.insertBefore(canvas, hud);
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#3a3028');
-  const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 80); cam.position.set(0, 14.2, 12); cam.lookAt(0, 0, 2.9);
+  const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 120);
+  // caméra libre, comme sur Forgeopoly : glisser dans le vide pour tourner, molette pour zoomer
+  const CAM0 = { yaw: 0, pitch: 1.0, dist: 18.5 };
+  let yaw = CAM0.yaw, pitch = CAM0.pitch, dist = CAM0.dist, orbit = null;
+  const placeCam = () => { cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, 1.2 + Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(0, 0, 1.2); };
+  const resetCam = () => { yaw = CAM0.yaw; pitch = CAM0.pitch; dist = CAM0.dist; };
   scene.add(new THREE.HemisphereLight('#fff8ec', '#8a6a4a', 1.5));
   const sun = new THREE.DirectionalLight('#fff0dc', 1.1); sun.position.set(-5, 12, 8); scene.add(sun);
   const M = (color, x) => { const m = new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...(x || {}) }); m.color.convertSRGBToLinear(); return m; };
@@ -183,7 +188,7 @@ function startTactiqueClient() {
   };
   function renderUI() {
     const p = me(), prep = cur.phase === 'prep', pve = D.pve.includes(cur.round);
-    ui.innerHTML = `<div class="ft-top"><b>Manche ${cur.round}</b><span>${pve ? 'Monstres · butin' : 'Duel'}</span><em id="ftTime"></em></div>
+    ui.innerHTML = `<div class="ft-cam">Glisser dans le vide : tourner · Molette : zoomer · C : recentrer</div><div class="ft-top"><b>Manche ${cur.round}</b><span>${pve ? 'Monstres · butin' : 'Duel'}</span><em id="ftTime"></em></div>
       <div class="ft-left">${traitsNow().map(t => `<div class="ft-tr ${t.lv ? 'on' : ''}" style="--c:${T[t.t].c}" data-tr="${t.t}"><i>${t.n}</i><span>${esc(T[t.t].n)}</span><small>${t.n}/${t.next}</small></div>`).join('')}</div>
       <div class="ft-right">${cur.p.map((q, i) => ({ ...q, i })).sort((a, b) => b.hp - a.hp).map(q => `<div class="ft-pl ${q.i === mySeat ? 'me' : ''} ${q.hp ? '' : 'out'}"><span>${esc(q.n)}</span><b>${q.hp}</b><u style="width:${q.hp}%"></u></div>`).join('')}</div>
       <div class="ft-info" id="ftInfo" hidden></div>
@@ -218,6 +223,7 @@ function startTactiqueClient() {
     else if (c === 'KeyX' || c === 'KeyL') { e.preventDefault(); doXp(); }
     else if (c === 'Space' || c === 'KeyJ') { e.preventDefault(); act('skip'); SFX.tick(); }
     else if (c === 'KeyE' && hoverSpot && cur.phase === 'prep' && unitAt(hoverSpot)) { e.preventDefault(); act('sell', { b: hoverSpot }); sfx(300, 0.08, 'triangle', 0.04); }
+    else if (c === 'KeyC') { e.preventDefault(); resetCam(); }
     else if (c === 'Escape' && selItem !== null) { e.stopPropagation(); selItem = null; renderUI(); }
   };
   window.addEventListener('keydown', kd, true);
@@ -228,19 +234,33 @@ function startTactiqueClient() {
     else if (t) { const x = T[t.dataset.tr]; showInfo(`<b style="color:${x.c}">${esc(x.n)}</b><p>${esc(x.name)} : ${x.val.join(' / ')}</p><small>Paliers : ${x.at.join(', ')} unités différentes</small>`); }
   });
   ui.addEventListener('pointerout', e => { if (e.target.closest('[data-u],[data-tr]')) showInfo(''); });
+  // on attrape une figurine là où elle se voit à l'écran, quel que soit l'angle de la caméra
+  const pickUnit = e => {
+    const r = hud.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, reach = 30 * 18.5 / dist;
+    let best = null, bd = reach * reach;
+    shown.forEach(o => { const [x, z] = worldOf(o.s), [sx, sy] = project(x, 0.9, z), d = (sx - mx) ** 2 + ((sy - my) * 0.7) ** 2; if (d < bd) { bd = d; best = o.s; } });
+    return best;
+  };
   hud.addEventListener('pointerdown', e => {
-    if (!cur || cur.phase !== 'prep' || !me().hp) return;
-    const s = cellOf(toWorld(e)); if (!s) return; const u = unitAt(s); if (!u) return;
+    if (!cur) return;
+    try { hud.setPointerCapture(e.pointerId); } catch (_) {}
+    const s = cur.phase === 'prep' && me().hp ? pickUnit(e) : null, u = s && unitAt(s);
+    if (!u) { orbit = { x: e.clientX, y: e.clientY }; return; }     // dans le vide : on tourne autour du plateau
     if (selItem !== null) { act('equip', { i: selItem, b: s }); selItem = null; sfx(880, 0.08, 'triangle', 0.04); return; }
-    drag = { s, u }; try { hud.setPointerCapture(e.pointerId); } catch (_) {}
+    drag = { s, u };
   });
+  hud.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(10, Math.min(28, dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
+  hud.addEventListener('dblclick', resetCam);
   hud.addEventListener('pointermove', e => {
-    if (!cur) return; const r = hud.getBoundingClientRect(); mouse = { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
-    const w = toWorld(e); if (w) mouse.w = w; const s = cellOf(w); hoverSpot = s;
+    if (!cur) return;
+    if (orbit) { yaw -= (e.clientX - orbit.x) * 0.006; pitch = Math.max(0.4, Math.min(1.45, pitch + (e.clientY - orbit.y) * 0.004)); orbit = { x: e.clientX, y: e.clientY }; return; }
+    const r = hud.getBoundingClientRect(); mouse = { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+    const w = toWorld(e); if (w) mouse.w = w; const s = cellOf(w); hoverSpot = (cur.phase === 'prep' && pickUnit(e)) || s;
     hoverTile.visible = !!(drag && s); if (s) { const [x, z] = worldOf(s); hoverTile.position.x = x; hoverTile.position.z = z; }
-    if (!drag && cur.phase === 'prep') { const u = s && unitAt(s); showInfo(u ? unitTip(u[0], u[1], u[2]) : ''); }
+    if (!drag && cur.phase === 'prep') { const u = hoverSpot && unitAt(hoverSpot); showInfo(u ? unitTip(u[0], u[1], u[2]) : ''); hud.style.cursor = u ? 'grab' : 'move'; }
   });
   hud.addEventListener('pointerup', e => {
+    orbit = null;
     if (!drag) return; const t = cellOf(toWorld(e)), r = hud.getBoundingClientRect(), y = (e.clientY - r.top) / r.height;
     if (y > 0.78 && !t) { act('sell', { b: drag.s }); sfx(300, 0.08, 'triangle', 0.04); }
     else if (t && t.join() !== drag.s.join()) { if (t[0] === 'b' && drag.s[0] === 's' && !unitAt(t) && me().board.length >= me().lv) toast(`Niveau ${me().lv} : ${me().lv} unités au maximum.`); else act('move', { a2: drag.s, b: t }); }
@@ -306,8 +326,12 @@ function startTactiqueClient() {
   const stop = loop(() => {
     if (!cur) return;
     const now = performance.now(), cw = hud.clientWidth, ch = hud.clientHeight;
-    if (cw && (cw !== lastW || ch !== lastH)) { lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'; cam.aspect = cw / ch; cam.updateProjectionMatrix(); }
+    if (cw && (cw !== lastW || ch !== lastH)) { lastW = cw; lastH = ch; renderer.setSize(cw, ch, false); canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'; cam.aspect = cw / ch; cam.setViewOffset(cw, ch, 0, ch * 0.13, cw, ch); cam.updateProjectionMatrix(); }
     g.clearRect(0, 0, W, H);
+    placeCam();
+    // les figurines restent tournées vers la caméra
+    const face = o => { o.rotation.y = yaw; o.userData.m.rotation.x = 0.68 - pitch; };
+    shown.forEach(o => face(o.fig)); fightFig.forEach(face);
     lava.emissiveIntensity = 0.9 + Math.sin(now / 400) * 0.25; glow.intensity = 1.1 + Math.sin(now / 170) * 0.15;
     const f = cur.phase === 'combat' ? myFight() : null;
     if (f) drawCombat(f, now);
